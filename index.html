@@ -3,67 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん チーム同期版</title>
+    <title>テキスト整形くん 決定版</title>
     <style>
-        body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; background-color: #f4f7f9; }
-        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { font-size: 1.4rem; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        textarea { width: 100%; height: 150px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        .config-area { background: #fff3cd; padding: 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.8rem; border: 1px solid #ffeeba; }
-        .whitelist-area { background: #e2eefd; padding: 15px; border-radius: 4px; margin-bottom: 15px; }
-        .buttons { display: flex; gap: 10px; margin: 20px 0; }
-        button { flex: 1; padding: 12px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        .btn-sync { background: #6f42c1; } /* 紫色：同期ボタン */
-        .btn-download { background: #28a745; }
-        #output { background: #fff; padding: 20px; border: 1px solid #ddd; white-space: pre-wrap; min-height: 150px; }
-        input[type="password"] { width: 100%; padding: 5px; margin-top: 5px; }
+        /* --- 基本デザインと変数 --- */
+        :root {
+            --bg-color: #f4f7f9;
+            --container-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #cccccc;
+            --accent-blue: #007bff;
+            --accent-green: #28a745;
+            --accent-purple: #6f42c1;
+            --accent-red: #dc3545;
+            --config-bg: #fff3cd;
+            --list-bg: #e2eefd;
+        }
+
+        /* --- ダークモード用設定 --- */
+        body.dark-mode {
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --border-color: #444444;
+            --accent-blue: #3793ff;
+            --config-bg: #3d3b30;
+            --list-bg: #2a3544;
+        }
+
+        body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; }
+        .container { background: var(--container-bg); padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        h1 { font-size: 1.4rem; border-bottom: 2px solid var(--accent-blue); padding-bottom: 10px; margin-top: 0; }
+        
+        textarea { width: 100%; height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); }
+        
+        .config-area { background: var(--config-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.8rem; border: 1px solid #ffeeba; }
+        .whitelist-area { background: var(--list-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+        
+        .button-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }
+        button { padding: 12px; cursor: pointer; background: var(--accent-blue); color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; }
+        button:hover { opacity: 0.8; }
+        
+        .btn-sync { background: var(--accent-purple); }
+        .btn-download { background: var(--accent-green); }
+        .btn-clear { background: var(--accent-red); }
+        .btn-mode { background: #666; }
+        .btn-copy { background: #17a2b8; }
+
+        #output { background: var(--container-bg); padding: 20px; border: 1px solid var(--border-color); border-radius: 4px; white-space: pre-wrap; min-height: 150px; margin-top: 10px; }
+        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-weight: bold; }
     </style>
 </head>
-<body>
+<body class="light-mode">
 
 <div class="container">
-    <h1>テキスト整形くん (チーム同期版)</h1>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <h1>テキスト整形くん 決定版</h1>
+        <button class="btn-mode" onclick="toggleDarkMode()" id="modeBtn">🌙 ダークモード</button>
+    </div>
     
-    <!-- 設定エリア：トークンを知っている人だけが同期できる -->
     <details class="config-area">
-        <summary>🔧 チーム同期設定（管理者・編集者用）</summary>
-        <p>GitHubのパーソナルアクセストークンを入力してください。ブラウザに保存されます。</p>
-        <input type="password" id="githubToken" oninput="saveSettings()" placeholder="github_pat_...">
-        <p>GitHubユーザー名: <input type="text" id="githubUser" oninput="saveSettings()" placeholder="sakumaaaaa"></p>
+        <summary>🔧 チーム同期設定</summary>
+        <p>GitHubトークン: <input type="password" id="githubToken" oninput="saveSettings()" placeholder="github_pat_..."></p>
+        <p>ユーザー名: <input type="text" id="githubUser" oninput="saveSettings()" placeholder="sakumaaaaa"></p>
         <p>リポジトリ名: <input type="text" id="githubRepo" oninput="saveSettings()" placeholder="text-formatting-tool"></p>
     </details>
 
     <div class="whitelist-area">
         <label><strong>除外リスト（カンマ区切り）</strong></label>
-        <textarea id="whitelist" placeholder="GaN HEMT, Power MOSFET"></textarea>
+        <textarea id="whitelist" style="height: 60px;"></textarea>
         <div style="display: flex; gap: 10px; margin-top:10px;">
-            <button class="btn-sync" onclick="syncFromGitHub()">☁️ チームのリストを読み込む</button>
-            <button class="btn-sync" onclick="syncToGitHub()">⬆️ 今のリストを全員に共有する</button>
+            <button class="btn-sync" onclick="syncFromGitHub()">☁️ チームから読込</button>
+            <button class="btn-sync" onclick="syncToGitHub()">⬆️ チームに共有</button>
         </div>
     </div>
 
-    <label><strong>① 元のテキスト</strong></label>
-    <textarea id="input" placeholder="テキストを貼り付け..."></textarea>
+    <div class="label-row">
+        <span>① 元のテキスト</span>
+        <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
+    </div>
+    <textarea id="input" placeholder="テキストを貼り付けてください..."></textarea>
     
-    <div class="buttons">
+    <div class="button-grid">
         <button onclick="processText()">✨ 整形を実行</button>
+        <button class="btn-copy" onclick="copyToClipboard()">📋 コピー</button>
         <button class="btn-download" onclick="downloadTxt()">💾 .txt保存</button>
     </div>
 
-    <label><strong>② 整形結果</strong></label>
+    <div class="label-row">② 整形結果</div>
     <div id="output"></div>
 </div>
 
 <script>
     const FILE_PATH = 'common_list.txt';
 
-    // 読み込み
     window.onload = function() {
         document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
         document.getElementById('githubUser').value = localStorage.getItem('gh_user') || '';
         document.getElementById('githubRepo').value = localStorage.getItem('gh_repo') || '';
         document.getElementById('whitelist').value = localStorage.getItem('myTextToolWhitelist') || '';
-        syncFromGitHub(); // 起動時に自動で読み込み
+        if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
+        syncFromGitHub();
     };
 
     function saveSettings() {
@@ -72,67 +111,77 @@
         localStorage.setItem('gh_repo', document.getElementById('githubRepo').value);
     }
 
-    // GitHubからリストを取得
+    /* --- ⑦ ダークモード切り替え --- */
+    function toggleDarkMode() {
+        const body = document.body;
+        body.classList.toggle('dark-mode');
+        const isDark = body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        document.getElementById('modeBtn').innerText = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+    }
+
+    /* --- ⑧ 全削除 --- */
+    function clearAll() {
+        if(confirm("入力をすべて削除しますか？")) {
+            document.getElementById('input').value = "";
+            document.getElementById('output').innerText = "";
+        }
+    }
+
+    /* --- ⑥ クリップボードにコピー --- */
+    function copyToClipboard() {
+        const text = document.getElementById('output').innerText;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            alert("コピーしました！");
+        });
+    }
+
     async function syncFromGitHub() {
         const user = document.getElementById('githubUser').value;
         const repo = document.getElementById('githubRepo').value;
         if(!user || !repo) return;
-
         try {
             const res = await fetch(`https://raw.githubusercontent.com/${user}/${repo}/main/${FILE_PATH}?t=${Date.now()}`);
             if (res.ok) {
                 const text = await res.text();
                 document.getElementById('whitelist').value = text;
                 localStorage.setItem('myTextToolWhitelist', text);
-                console.log("同期完了");
             }
-        } catch (e) { alert("読み込み失敗"); }
+        } catch (e) { console.error("Sync error"); }
     }
 
-    // GitHubへリストを書き込み
     async function syncToGitHub() {
         const token = document.getElementById('githubToken').value;
         const user = document.getElementById('githubUser').value;
         const repo = document.getElementById('githubRepo').value;
         const content = document.getElementById('whitelist').value;
-
         if (!token) { alert("トークンを設定してください"); return; }
-
         try {
-            // 1. 現在のファイルのSHA（バージョンID）を取得する必要がある
             const url = `https://api.github.com/repos/${user}/${repo}/contents/${FILE_PATH}`;
-            const getRes = await fetch(url, {
-                headers: { "Authorization": `token ${token}` }
-            });
+            const getRes = await fetch(url, { headers: { "Authorization": `token ${token}` } });
             const fileData = await getRes.json();
-            const sha = fileData.sha;
-
-            // 2. アップデート
             const putRes = await fetch(url, {
                 method: "PUT",
-                headers: {
-                    "Authorization": `token ${token}`,
-                    "Content-Type": "application/json",
-                },
+                headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: "Update common_list.txt via Web App",
-                    content: btoa(unescape(encodeURIComponent(content))), // Base64エンコード
-                    sha: sha
+                    message: "Update common_list.txt",
+                    content: btoa(unescape(encodeURIComponent(content))),
+                    sha: fileData.sha
                 })
             });
-
-            if (putRes.ok) {
-                alert("チーム全員に共有しました！");
-            } else {
-                alert("共有に失敗しました。権限を確認してください。");
-            }
+            if (putRes.ok) alert("共有成功！");
         } catch (e) { alert("エラーが発生しました"); }
     }
 
-    // 整形ロジック (前回と同じ)
+    /* --- メインの整形ロジック --- */
     function processText() {
         let text = document.getElementById('input').value;
+        
+        // 特殊空白の統一
         text = text.replace(/[\u3000\t]/g, ' ');
+
+        // 除外リストの保護
         const whitelistStr = document.getElementById('whitelist').value;
         const whitelist = whitelistStr.split(',').map(s => s.trim()).filter(s => s !== "");
         const placeholders = [];
@@ -143,7 +192,26 @@
             const escapedWord = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&').replace(/\s+/g, '\\s+');
             text = text.replace(new RegExp(escapedWord, 'gi'), p);
         });
+
+        // ⑤ 行頭に全角スペースがある場合、直前で改行しない（改行を消して結合）
+        text = text.replace(/\n(?=　)/g, '');
+
+        // ① 半角カッコ()を全角カッコ（）に置換
+        text = text.replace(/\(/g, '（').replace(/\)/g, '）');
+
+        // ② "～"（U+FF5E）を "〜"（U+301C）に置換
+        text = text.replace(/\uFF5E/g, '\u301C');
+
+        // ③ 全角数字[０-９] → 半角数字[0-9]
+        // ④ 全角アルファベット[ａ-ｚＡ-Ｚ] → 半角アルファベット[a-zA-Z]
+        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, function(s) {
+            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+        });
+
+        // 既存の改行結合（段落維持）
         text = text.replace(/([^\n])\n([^\n])/g, '$1$2');
+
+        // 1文字バラバラの結合
         let prev;
         do {
             prev = text;
@@ -151,9 +219,16 @@
                 return (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2;
             });
         } while (prev !== text);
+
+        // 日本語周辺のスペース削除
         text = text.replace(/([^\x00-\x7F])\s+/g, '$1');
         text = text.replace(/\s+([^\x00-\x7F])/g, '$1');
-        placeholders.forEach(item => { text = text.split(item.placeholder).join(item.original); });
+
+        // 保護復元
+        placeholders.forEach(item => {
+            text = text.split(item.placeholder).join(item.original);
+        });
+
         text = text.replace(/\n{3,}/g, '\n\n');
         document.getElementById('output').innerText = text.trim();
     }
@@ -167,6 +242,5 @@
         a.click();
     }
 </script>
-
 </body>
 </html>
