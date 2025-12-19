@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 決定版</title>
+    <title>テキスト整形くん 決定版 v2</title>
     <style>
-        /* --- 基本デザインと変数 --- */
         :root {
             --bg-color: #f4f7f9;
             --container-bg: #ffffff;
@@ -19,7 +18,6 @@
             --list-bg: #e2eefd;
         }
 
-        /* --- ダークモード用設定 --- */
         body.dark-mode {
             --bg-color: #1a1a1a;
             --container-bg: #2d2d2d;
@@ -30,63 +28,65 @@
             --list-bg: #2a3544;
         }
 
-        body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; }
+        body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.4; }
         .container { background: var(--container-bg); padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        h1 { font-size: 1.4rem; border-bottom: 2px solid var(--accent-blue); padding-bottom: 10px; margin-top: 0; }
+        h1 { font-size: 1.3rem; border-left: 5px solid var(--accent-blue); padding-left: 15px; margin-top: 0; margin-bottom: 20px; }
         
-        textarea { width: 100%; height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); }
+        textarea { width: 100%; height: 180px; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); font-family: inherit; }
         
         .config-area { background: var(--config-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.8rem; border: 1px solid #ffeeba; }
         .whitelist-area { background: var(--list-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px; }
         
-        .button-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }
-        button { padding: 12px; cursor: pointer; background: var(--accent-blue); color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; }
+        .button-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 15px 0; }
+        button { padding: 12px; cursor: pointer; background: var(--accent-blue); color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px; }
         button:hover { opacity: 0.8; }
         
         .btn-sync { background: var(--accent-purple); }
         .btn-download { background: var(--accent-green); }
-        .btn-clear { background: var(--accent-red); }
-        .btn-mode { background: #666; }
+        .btn-clear { background: var(--accent-red); font-size: 11px; padding: 5px 10px; }
+        .btn-mode { background: #666; font-size: 11px; padding: 5px 10px; }
         .btn-copy { background: #17a2b8; }
 
-        #output { background: var(--container-bg); padding: 20px; border: 1px solid var(--border-color); border-radius: 4px; white-space: pre-wrap; min-height: 150px; margin-top: 10px; }
-        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-weight: bold; }
+        #output { background: var(--container-bg); padding: 20px; border: 1px solid var(--border-color); border-radius: 4px; white-space: pre-wrap; min-height: 180px; margin-top: 10px; font-size: 14px; word-break: break-all; }
+        .label-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem; }
+        .top-nav { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body class="light-mode">
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <h1>テキスト整形くん 決定版</h1>
+    <div class="top-nav">
         <button class="btn-mode" onclick="toggleDarkMode()" id="modeBtn">🌙 ダークモード</button>
+        <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
     </div>
+    
+    <h1>テキスト整形くん 決定版 v2</h1>
     
     <details class="config-area">
         <summary>🔧 チーム同期設定</summary>
-        <p>GitHubトークン: <input type="password" id="githubToken" oninput="saveSettings()" placeholder="github_pat_..."></p>
-        <p>ユーザー名: <input type="text" id="githubUser" oninput="saveSettings()" placeholder="sakumaaaaa"></p>
-        <p>リポジトリ名: <input type="text" id="githubRepo" oninput="saveSettings()" placeholder="text-formatting-tool"></p>
+        <div style="margin-top:10px;">
+            GitHubトークン: <input type="password" id="githubToken" oninput="saveSettings()" style="width:70%;"><br>
+            ユーザー名: <input type="text" id="githubUser" oninput="saveSettings()" placeholder="sakumaaaaa">
+            リポジトリ: <input type="text" id="githubRepo" oninput="saveSettings()" placeholder="text-formatting-tool">
+        </div>
     </details>
 
     <div class="whitelist-area">
-        <label><strong>除外リスト（カンマ区切り）</strong></label>
-        <textarea id="whitelist" style="height: 60px;"></textarea>
+        <label><strong>除外リスト（共通設定）</strong></label>
+        <textarea id="whitelist" style="height: 50px; margin-top:5px;"></textarea>
         <div style="display: flex; gap: 10px; margin-top:10px;">
-            <button class="btn-sync" onclick="syncFromGitHub()">☁️ チームから読込</button>
-            <button class="btn-sync" onclick="syncToGitHub()">⬆️ チームに共有</button>
+            <button class="btn-sync" onclick="syncFromGitHub()" style="flex:1;">☁️ 読込</button>
+            <button class="btn-sync" onclick="syncToGitHub()" style="flex:1;">⬆️ 共有</button>
         </div>
     </div>
 
-    <div class="label-row">
-        <span>① 元のテキスト</span>
-        <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
-    </div>
-    <textarea id="input" placeholder="テキストを貼り付けてください..."></textarea>
+    <div class="label-row">① 元のテキスト</div>
+    <textarea id="input" placeholder="ここに貼り付け..."></textarea>
     
     <div class="button-grid">
         <button onclick="processText()">✨ 整形を実行</button>
-        <button class="btn-copy" onclick="copyToClipboard()">📋 コピー</button>
-        <button class="btn-download" onclick="downloadTxt()">💾 .txt保存</button>
+        <button class="btn-copy" onclick="copyToClipboard()">📋 クリップボードにコピー</button>
+        <button class="btn-download" onclick="downloadTxt()">💾 .txtで保存</button>
     </div>
 
     <div class="label-row">② 整形結果</div>
@@ -111,7 +111,7 @@
         localStorage.setItem('gh_repo', document.getElementById('githubRepo').value);
     }
 
-    /* --- ⑦ ダークモード切り替え --- */
+    /* ⑦ ダークモード */
     function toggleDarkMode() {
         const body = document.body;
         body.classList.toggle('dark-mode');
@@ -120,23 +120,26 @@
         document.getElementById('modeBtn').innerText = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
     }
 
-    /* --- ⑧ 全削除 --- */
+    /* ⑧ 全削除 */
     function clearAll() {
-        if(confirm("入力をすべて削除しますか？")) {
+        if(confirm("入力と結果をすべて消去しますか？")) {
             document.getElementById('input').value = "";
             document.getElementById('output').innerText = "";
         }
     }
 
-    /* --- ⑥ クリップボードにコピー --- */
+    /* ⑥ コピー */
     function copyToClipboard() {
         const text = document.getElementById('output').innerText;
         if (!text) return;
         navigator.clipboard.writeText(text).then(() => {
-            alert("コピーしました！");
+            alert("コピー完了！");
+        }).catch(() => {
+            alert("コピーに失敗しました。手動で選択してコピーしてください。");
         });
     }
 
+    /* GitHub同期 */
     async function syncFromGitHub() {
         const user = document.getElementById('githubUser').value;
         const repo = document.getElementById('githubRepo').value;
@@ -148,7 +151,7 @@
                 document.getElementById('whitelist').value = text;
                 localStorage.setItem('myTextToolWhitelist', text);
             }
-        } catch (e) { console.error("Sync error"); }
+        } catch (e) { console.error(e); }
     }
 
     async function syncToGitHub() {
@@ -156,7 +159,7 @@
         const user = document.getElementById('githubUser').value;
         const repo = document.getElementById('githubRepo').value;
         const content = document.getElementById('whitelist').value;
-        if (!token) { alert("トークンを設定してください"); return; }
+        if (!token) { alert("トークンが必要です"); return; }
         try {
             const url = `https://api.github.com/repos/${user}/${repo}/contents/${FILE_PATH}`;
             const getRes = await fetch(url, { headers: { "Authorization": `token ${token}` } });
@@ -170,16 +173,16 @@
                     sha: fileData.sha
                 })
             });
-            if (putRes.ok) alert("共有成功！");
-        } catch (e) { alert("エラーが発生しました"); }
+            if (putRes.ok) alert("チーム全員に共有しました！");
+        } catch (e) { alert("エラーが発生しました。"); }
     }
 
-    /* --- メインの整形ロジック --- */
+    /* メイン整形ロジック */
     function processText() {
         let text = document.getElementById('input').value;
         
-        // 特殊空白の統一
-        text = text.replace(/[\u3000\t]/g, ' ');
+        // 0. 特殊空白（全角スペース以外）の統一
+        text = text.replace(/[\t\u00A0]/g, ' ');
 
         // 除外リストの保護
         const whitelistStr = document.getElementById('whitelist').value;
@@ -193,25 +196,28 @@
             text = text.replace(new RegExp(escapedWord, 'gi'), p);
         });
 
-        // ⑤ 行頭に全角スペースがある場合、直前で改行しない（改行を消して結合）
-        text = text.replace(/\n(?=　)/g, '');
-
-        // ① 半角カッコ()を全角カッコ（）に置換
+        // ① 半角カッコ()を全角カッコ（）に
         text = text.replace(/\(/g, '（').replace(/\)/g, '）');
 
-        // ② "～"（U+FF5E）を "〜"（U+301C）に置換
+        // ② 波線置換 U+FF5E → U+301C
         text = text.replace(/\uFF5E/g, '\u301C');
 
-        // ③ 全角数字[０-９] → 半角数字[0-9]
-        // ④ 全角アルファベット[ａ-ｚＡ-Ｚ] → 半角アルファベット[a-zA-Z]
+        // ③④ 全角英数字を半角へ
         text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, function(s) {
             return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
         });
 
-        // 既存の改行結合（段落維持）
+        // ⑤ 段落の処理（ここが修正ポイント！）
+        // 1. 全角スペースで始まる行を「段落の開始」として一時保護
+        text = text.replace(/\n　/g, '___PARA_BREAK___');
+        
+        // 2. 文の途中の改行（単なる改行）をすべて削除して結合
         text = text.replace(/([^\n])\n([^\n])/g, '$1$2');
+        
+        // 3. 保護した段落開始を「2つの改行（1行あき）＋全角スペース」に戻す
+        text = text.replace(/___PARA_BREAK___/g, '\n\n　');
 
-        // 1文字バラバラの結合
+        // 英数字バラバラ結合
         let prev;
         do {
             prev = text;
@@ -221,26 +227,4 @@
         } while (prev !== text);
 
         // 日本語周辺のスペース削除
-        text = text.replace(/([^\x00-\x7F])\s+/g, '$1');
-        text = text.replace(/\s+([^\x00-\x7F])/g, '$1');
-
-        // 保護復元
-        placeholders.forEach(item => {
-            text = text.split(item.placeholder).join(item.original);
-        });
-
-        text = text.replace(/\n{3,}/g, '\n\n');
-        document.getElementById('output').innerText = text.trim();
-    }
-
-    function downloadTxt() {
-        const text = document.getElementById('output').innerText;
-        const blob = new Blob([text], { type: 'text/plain' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'cleaned_text.txt';
-        a.click();
-    }
-</script>
-</body>
-</html>
+        text = text.replace
