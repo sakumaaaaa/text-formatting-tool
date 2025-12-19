@@ -1,1 +1,1 @@
-GaN HEMT, Power MOSFET, Graphics Processing Unit, Advanced Micro Devices, ルネサス エレクトロニクス, Infineon Technologies, Robert Bosch, ST Microelectronics, OmniVision Technologies, Internet of Things, NXP Semiconductors, High Bandwidth Memory
+GaN HEMT, Power MOSFET, Graphics Processing Unit, Advanced Micro Devices, ルネサス エレクトロニクス, Infineon Technologies, Robert Bosch, ST Microelectronics, OmniVision Technologies, Internet of Things, NXP Semiconductors, High Bandwidth Memory, Samsung Electronics
