@@ -227,4 +227,28 @@
         } while (prev !== text);
 
         // 日本語周辺のスペース削除
-        text = text.replace
+        text = text.replace(/([^\x00-\x7F])\s+/g, '$1');
+        text = text.replace(/\s+([^\x00-\x7F])/g, '$1');
+
+        // 除外リストの復元
+        placeholders.forEach(item => {
+            text = text.split(item.placeholder).join(item.original);
+        });
+
+        // 仕上げ
+        text = text.replace(/\n{3,}/g, '\n\n');
+        document.getElementById('output').innerText = text.trim();
+    }
+
+    function downloadTxt() {
+        const text = document.getElementById('output').innerText;
+        if (!text) return;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'cleaned_text.txt';
+        a.click();
+    }
+</script>
+</body>
+</html>
