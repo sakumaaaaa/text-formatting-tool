@@ -1,1 +1,2 @@
-GaN HEMT, Power MOSFET, Graphics Processing Unit, Advanced Micro Devices, ルネサス エレクトロニクス, Infi neon Technologies
+GaN HEMT, Power MOSFET, Graphics Processing Unit, Advanced Micro Devices, ルネサス エレクトロニクス, 
+Infineon Technologies
