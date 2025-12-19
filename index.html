@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 決定版 v2</title>
+    <title>テキスト整形くん 決定版 v3</title>
     <style>
         :root {
             --bg-color: #f4f7f9;
@@ -60,7 +60,7 @@
         <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 決定版 v2</h1>
+    <h1>テキスト整形くん 決定版 v3</h1>
     
     <details class="config-area">
         <summary>🔧 チーム同期設定</summary>
@@ -72,183 +72,7 @@
     </details>
 
     <div class="whitelist-area">
-        <label><strong>除外リスト（共通設定）</strong></label>
-        <textarea id="whitelist" style="height: 50px; margin-top:5px;"></textarea>
+        <label><strong>除外リスト（日・英対応）</strong></label>
+        <textarea id="whitelist" style="height: 50px; margin-top:5px;" placeholder="GaN HEMT, ルネサス エレクトロニクス">GaN HEMT, Power MOSFET, ルネサス エレクトロニクス</textarea>
         <div style="display: flex; gap: 10px; margin-top:10px;">
-            <button class="btn-sync" onclick="syncFromGitHub()" style="flex:1;">☁️ 読込</button>
-            <button class="btn-sync" onclick="syncToGitHub()" style="flex:1;">⬆️ 共有</button>
-        </div>
-    </div>
-
-    <div class="label-row">① 元のテキスト</div>
-    <textarea id="input" placeholder="ここに貼り付け..."></textarea>
-    
-    <div class="button-grid">
-        <button onclick="processText()">✨ 整形を実行</button>
-        <button class="btn-copy" onclick="copyToClipboard()">📋 クリップボードにコピー</button>
-        <button class="btn-download" onclick="downloadTxt()">💾 .txtで保存</button>
-    </div>
-
-    <div class="label-row">② 整形結果</div>
-    <div id="output"></div>
-</div>
-
-<script>
-    const FILE_PATH = 'common_list.txt';
-
-    window.onload = function() {
-        document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
-        document.getElementById('githubUser').value = localStorage.getItem('gh_user') || '';
-        document.getElementById('githubRepo').value = localStorage.getItem('gh_repo') || '';
-        document.getElementById('whitelist').value = localStorage.getItem('myTextToolWhitelist') || '';
-        if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
-        syncFromGitHub();
-    };
-
-    function saveSettings() {
-        localStorage.setItem('gh_token', document.getElementById('githubToken').value);
-        localStorage.setItem('gh_user', document.getElementById('githubUser').value);
-        localStorage.setItem('gh_repo', document.getElementById('githubRepo').value);
-    }
-
-    /* ⑦ ダークモード */
-    function toggleDarkMode() {
-        const body = document.body;
-        body.classList.toggle('dark-mode');
-        const isDark = body.classList.contains('dark-mode');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        document.getElementById('modeBtn').innerText = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
-    }
-
-    /* ⑧ 全削除 */
-    function clearAll() {
-        if(confirm("入力と結果をすべて消去しますか？")) {
-            document.getElementById('input').value = "";
-            document.getElementById('output').innerText = "";
-        }
-    }
-
-    /* ⑥ コピー */
-    function copyToClipboard() {
-        const text = document.getElementById('output').innerText;
-        if (!text) return;
-        navigator.clipboard.writeText(text).then(() => {
-            alert("コピー完了！");
-        }).catch(() => {
-            alert("コピーに失敗しました。手動で選択してコピーしてください。");
-        });
-    }
-
-    /* GitHub同期 */
-    async function syncFromGitHub() {
-        const user = document.getElementById('githubUser').value;
-        const repo = document.getElementById('githubRepo').value;
-        if(!user || !repo) return;
-        try {
-            const res = await fetch(`https://raw.githubusercontent.com/${user}/${repo}/main/${FILE_PATH}?t=${Date.now()}`);
-            if (res.ok) {
-                const text = await res.text();
-                document.getElementById('whitelist').value = text;
-                localStorage.setItem('myTextToolWhitelist', text);
-            }
-        } catch (e) { console.error(e); }
-    }
-
-    async function syncToGitHub() {
-        const token = document.getElementById('githubToken').value;
-        const user = document.getElementById('githubUser').value;
-        const repo = document.getElementById('githubRepo').value;
-        const content = document.getElementById('whitelist').value;
-        if (!token) { alert("トークンが必要です"); return; }
-        try {
-            const url = `https://api.github.com/repos/${user}/${repo}/contents/${FILE_PATH}`;
-            const getRes = await fetch(url, { headers: { "Authorization": `token ${token}` } });
-            const fileData = await getRes.json();
-            const putRes = await fetch(url, {
-                method: "PUT",
-                headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    message: "Update common_list.txt",
-                    content: btoa(unescape(encodeURIComponent(content))),
-                    sha: fileData.sha
-                })
-            });
-            if (putRes.ok) alert("チーム全員に共有しました！");
-        } catch (e) { alert("エラーが発生しました。"); }
-    }
-
-    /* メイン整形ロジック */
-    function processText() {
-        let text = document.getElementById('input').value;
-        
-        // 0. 特殊空白（全角スペース以外）の統一
-        text = text.replace(/[\t\u00A0]/g, ' ');
-
-        // 除外リストの保護
-        const whitelistStr = document.getElementById('whitelist').value;
-        const whitelist = whitelistStr.split(',').map(s => s.trim()).filter(s => s !== "");
-        const placeholders = [];
-        whitelist.forEach((word, index) => {
-            if (word.length === 0) return;
-            const p = `__SAFE${index}__`;
-            placeholders.push({ placeholder: p, original: word });
-            const escapedWord = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&').replace(/\s+/g, '\\s+');
-            text = text.replace(new RegExp(escapedWord, 'gi'), p);
-        });
-
-        // ① 半角カッコ()を全角カッコ（）に
-        text = text.replace(/\(/g, '（').replace(/\)/g, '）');
-
-        // ② 波線置換 U+FF5E → U+301C
-        text = text.replace(/\uFF5E/g, '\u301C');
-
-        // ③④ 全角英数字を半角へ
-        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, function(s) {
-            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-        });
-
-        // ⑤ 段落の処理（ここが修正ポイント！）
-        // 1. 全角スペースで始まる行を「段落の開始」として一時保護
-        text = text.replace(/\n　/g, '___PARA_BREAK___');
-        
-        // 2. 文の途中の改行（単なる改行）をすべて削除して結合
-        text = text.replace(/([^\n])\n([^\n])/g, '$1$2');
-        
-        // 3. 保護した段落開始を「2つの改行（1行あき）＋全角スペース」に戻す
-        text = text.replace(/___PARA_BREAK___/g, '\n\n　');
-
-        // 英数字バラバラ結合
-        let prev;
-        do {
-            prev = text;
-            text = text.replace(/([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, (match, p1, p2) => {
-                return (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2;
-            });
-        } while (prev !== text);
-
-        // 日本語周辺のスペース削除
-        text = text.replace(/([^\x00-\x7F])\s+/g, '$1');
-        text = text.replace(/\s+([^\x00-\x7F])/g, '$1');
-
-        // 除外リストの復元
-        placeholders.forEach(item => {
-            text = text.split(item.placeholder).join(item.original);
-        });
-
-        // 仕上げ
-        text = text.replace(/\n{3,}/g, '\n\n');
-        document.getElementById('output').innerText = text.trim();
-    }
-
-    function downloadTxt() {
-        const text = document.getElementById('output').innerText;
-        if (!text) return;
-        const blob = new Blob([text], { type: 'text/plain' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'cleaned_text.txt';
-        a.click();
-    }
-</script>
-</body>
-</html>
+            <button class="btn-sync" o
