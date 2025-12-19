@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テキスト整形くん チーム同期版</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; background-color: #f4f7f9; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.4rem; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        textarea { width: 100%; height: 150px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        .config-area { background: #fff3cd; padding: 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.8rem; border: 1px solid #ffeeba; }
+        .whitelist-area { background: #e2eefd; padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+        .buttons { display: flex; gap: 10px; margin: 20px 0; }
+        button { flex: 1; padding: 12px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        .btn-sync { background: #6f42c1; } /* 紫色：同期ボタン */
+        .btn-download { background: #28a745; }
+        #output { background: #fff; padding: 20px; border: 1px solid #ddd; white-space: pre-wrap; min-height: 150px; }
+        input[type="password"] { width: 100%; padding: 5px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>テキスト整形くん (チーム同期版)</h1>
+    
+    <!-- 設定エリア：トークンを知っている人だけが同期できる -->
+    <details class="config-area">
+        <summary>🔧 チーム同期設定（管理者・編集者用）</summary>
+        <p>GitHubのパーソナルアクセストークンを入力してください。ブラウザに保存されます。</p>
+        <input type="password" id="githubToken" oninput="saveSettings()" placeholder="github_pat_...">
+        <p>GitHubユーザー名: <input type="text" id="githubUser" oninput="saveSettings()" placeholder="sakumaaaaa"></p>
+        <p>リポジトリ名: <input type="text" id="githubRepo" oninput="saveSettings()" placeholder="text-formatting-tool"></p>
+    </details>
+
+    <div class="whitelist-area">
+        <label><strong>除外リスト（カンマ区切り）</strong></label>
+        <textarea id="whitelist" placeholder="GaN HEMT, Power MOSFET"></textarea>
+        <div style="display: flex; gap: 10px; margin-top:10px;">
+            <button class="btn-sync" onclick="syncFromGitHub()">☁️ チームのリストを読み込む</button>
+            <button class="btn-sync" onclick="syncToGitHub()">⬆️ 今のリストを全員に共有する</button>
+        </div>
+    </div>
+
+    <label><strong>① 元のテキスト</strong></label>
+    <textarea id="input" placeholder="テキストを貼り付け..."></textarea>
+    
+    <div class="buttons">
+        <button onclick="processText()">✨ 整形を実行</button>
+        <button class="btn-download" onclick="downloadTxt()">💾 .txt保存</button>
+    </div>
+
+    <label><strong>② 整形結果</strong></label>
+    <div id="output"></div>
+</div>
+
+<script>
+    const FILE_PATH = 'common_list.txt';
+
+    // 読み込み
+    window.onload = function() {
+        document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
+        document.getElementById('githubUser').value = localStorage.getItem('gh_user') || '';
+        document.getElementById('githubRepo').value = localStorage.getItem('gh_repo') || '';
+        document.getElementById('whitelist').value = localStorage.getItem('myTextToolWhitelist') || '';
+        syncFromGitHub(); // 起動時に自動で読み込み
+    };
+
+    function saveSettings() {
+        localStorage.setItem('gh_token', document.getElementById('githubToken').value);
+        localStorage.setItem('gh_user', document.getElementById('githubUser').value);
+        localStorage.setItem('gh_repo', document.getElementById('githubRepo').value);
+    }
+
+    // GitHubからリストを取得
+    async function syncFromGitHub() {
+        const user = document.getElementById('githubUser').value;
+        const repo = document.getElementById('githubRepo').value;
+        if(!user || !repo) return;
+
+        try {
+            const res = await fetch(`https://raw.githubusercontent.com/${user}/${repo}/main/${FILE_PATH}?t=${Date.now()}`);
+            if (res.ok) {
+                const text = await res.text();
+                document.getElementById('whitelist').value = text;
+                localStorage.setItem('myTextToolWhitelist', text);
+                console.log("同期完了");
+            }
+        } catch (e) { alert("読み込み失敗"); }
+    }
+
+    // GitHubへリストを書き込み
+    async function syncToGitHub() {
+        const token = document.getElementById('githubToken').value;
+        const user = document.getElementById('githubUser').value;
+        const repo = document.getElementById('githubRepo').value;
+        const content = document.getElementById('whitelist').value;
+
+        if (!token) { alert("トークンを設定してください"); return; }
+
+        try {
+            // 1. 現在のファイルのSHA（バージョンID）を取得する必要がある
+            const url = `https://api.github.com/repos/${user}/${repo}/contents/${FILE_PATH}`;
+            const getRes = await fetch(url, {
+                headers: { "Authorization": `token ${token}` }
+            });
+            const fileData = await getRes.json();
+            const sha = fileData.sha;
+
+            // 2. アップデート
+            const putRes = await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${token}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    message: "Update common_list.txt via Web App",
+                    content: btoa(unescape(encodeURIComponent(content))), // Base64エンコード
+                    sha: sha
+                })
+            });
+
+            if (putRes.ok) {
+                alert("チーム全員に共有しました！");
+            } else {
+                alert("共有に失敗しました。権限を確認してください。");
+            }
+        } catch (e) { alert("エラーが発生しました"); }
+    }
+
+    // 整形ロジック (前回と同じ)
+    function processText() {
+        let text = document.getElementById('input').value;
+        text = text.replace(/[\u3000\t]/g, ' ');
+        const whitelistStr = document.getElementById('whitelist').value;
+        const whitelist = whitelistStr.split(',').map(s => s.trim()).filter(s => s !== "");
+        const placeholders = [];
+        whitelist.forEach((word, index) => {
+            if (word.length === 0) return;
+            const p = `__SAFE${index}__`;
+            placeholders.push({ placeholder: p, original: word });
+            const escapedWord = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&').replace(/\s+/g, '\\s+');
+            text = text.replace(new RegExp(escapedWord, 'gi'), p);
+        });
+        text = text.replace(/([^\n])\n([^\n])/g, '$1$2');
+        let prev;
+        do {
+            prev = text;
+            text = text.replace(/([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, (match, p1, p2) => {
+                return (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2;
+            });
+        } while (prev !== text);
+        text = text.replace(/([^\x00-\x7F])\s+/g, '$1');
+        text = text.replace(/\s+([^\x00-\x7F])/g, '$1');
+        placeholders.forEach(item => { text = text.split(item.placeholder).join(item.original); });
+        text = text.replace(/\n{3,}/g, '\n\n');
+        document.getElementById('output').innerText = text.trim();
+    }
+
+    function downloadTxt() {
+        const text = document.getElementById('output').innerText;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'cleaned_text.txt';
+        a.click();
+    }
+</script>
+
+</body>
+</html>
