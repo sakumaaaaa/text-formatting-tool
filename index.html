@@ -160,4 +160,106 @@
         const content = document.getElementById('whitelist').value;
         if (!token) { alert("トークンを入力してください"); return; }
         try {
-         
+            const url = `https://api.github.com/repos/${user}/${repo}/contents/${FILE_PATH}`;
+            const getRes = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
+            const fileData = await getRes.json();
+            const putRes = await fetch(url, {
+                method: "PUT",
+                headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: "Update common_list.txt",
+                    content: btoa(unescape(encodeURIComponent(content))),
+                    sha: fileData.sha
+                })
+            });
+            if (putRes.ok) alert("共有しました！");
+        } catch (e) { alert("エラーが発生しました"); }
+    }
+
+    /* 文字数カウントの更新 */
+    function updateCounter(text) {
+        const total = text.length;
+        let zenkakuCount = 0;
+        for (let i = 0; i < text.length; i++) {
+            const c = text.charCodeAt(i);
+            // 半角(ASCII, 半角カタカナ)は0.5、それ以外は1としてカウント
+            if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f) || (c === 0xf8f1 || c === 0xf8f2 || c === 0xf8f3)) {
+                zenkakuCount += 0.5;
+            } else {
+                zenkakuCount += 1;
+            }
+        }
+        document.getElementById('charCounter').innerText = `文字数: ${total} | 全角換算: ${Math.ceil(zenkakuCount)}`;
+    }
+
+    function processText() {
+        let text = document.getElementById('input').value;
+
+        // 0. 特殊空白の正規化
+        text = text.replace(/[\t\u00A0]/g, ' ');
+        // 行末の余計な空白を削除（段落判定の邪魔になるため）
+        text = text.replace(/[ ]+\n/g, '\n');
+
+        // ① 半角カッコ()を全角カッコ（）に
+        text = text.replace(/\(/g, '（').replace(/\)/g, '）');
+        // ② 波線置換 U+FF5E → U+301C
+        text = text.replace(/\uFF5E/g, '\u301C');
+        // ③④ 全角英数字を半角へ
+        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, function(s) {
+            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+        });
+
+        // ⑤ 段落の処理（改行＋全角スペースを保護）
+        text = text.replace(/\n[ 　]*　/g, '___PARA_BREAK___');
+        // 文の途中の改行を削除
+        text = text.replace(/([^\n])\n([^\n])/g, '$1$2');
+        // 段落を復活（1行あける）
+        text = text.replace(/___PARA_BREAK___/g, '\n\n　');
+
+        // 英数字バラバラ結合（1文字ルールの適用）
+        let prev;
+        do {
+            prev = text;
+            text = text.replace(/([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, (match, p1, p2) => {
+                return (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2;
+            });
+        } while (prev !== text);
+
+        // 日本語周辺のスペース削除
+        // ここで Infineon Technologies などのスペースが一旦消えるが、後でリストにより復元する
+        text = text.replace(/([^\x00-\x7F])\s+/g, '$1');
+        text = text.replace(/\s+([^\x00-\x7F])/g, '$1');
+
+        // 除外リストの復元
+        const whitelistStr = document.getElementById('whitelist').value;
+        const whitelist = whitelistStr.split(',').map(s => s.trim()).filter(s => s !== "");
+        
+        whitelist.forEach(word => {
+            if (word.length === 0) return;
+            // スペースを除去した「結合済み単語」を作成（例: InfineonTechnologies）
+            const combinedWord = word.replace(/\s+/g, '');
+            // 特殊文字をエスケープ
+            const escapedCombined = combinedWord.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            // 結合された状態の単語を見つけたら、スペースありの正解に置き換える
+            text = text.replace(new RegExp(escapedCombined, 'gi'), word);
+        });
+
+        // 仕上げ
+        text = text.replace(/\n{3,}/g, '\n\n');
+        const finalResult = text.trim();
+        document.getElementById('output').innerText = finalResult;
+        updateCounter(finalResult);
+    }
+
+    function downloadTxt() {
+        const text = document.getElementById('output').innerText;
+        if (!text) return;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'cleaned_text.txt';
+        a.click();
+    }
+</script>
+</body>
+</html>
