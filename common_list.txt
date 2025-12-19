@@ -1,1 +1,1 @@
-GaN HEMT, Power MOSFET, Graphics Processing Unit
+Power MOSFET, Graphics Processing Unit, 
