@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v14</title>
+    <title>テキスト整形くん 校閲Pro v15</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
@@ -18,13 +18,11 @@
         .container { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
         
-        /* エリア設定 */
         textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
         details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
         details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
 
-        /* グリッドレイアウト */
         .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
         .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
@@ -34,9 +32,12 @@
         .list-box label { font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 5px; }
 
         /* 操作系 */
-        .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border: 1px solid var(--border-color); }
+        .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border: 1px solid var(--border-color); }
         .style-select { font-weight: bold; padding: 8px; border-radius: 6px; border: 2px solid var(--accent-blue); background: var(--container-bg); color: var(--text-color); }
-        .compare-mode { display: flex; align-items: center; gap: 5px; font-weight: bold; color: var(--accent-purple); cursor: pointer; }
+        
+        /* 比較モードチェックボックスの状態 */
+        .compare-mode { display: flex; align-items: center; gap: 5px; font-weight: bold; color: var(--accent-purple); cursor: pointer; transition: 0.3s; }
+        .compare-mode.disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
 
         .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         button { padding: 12px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; color: white; }
@@ -61,9 +62,8 @@
         <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v14</h1>
+    <h1>テキスト整形くん 校閲Pro v15</h1>
 
-    <!-- 1. 同期設定 -->
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg);">
@@ -75,11 +75,9 @@
         </div>
     </details>
 
-    <!-- 2. 表記オプション -->
     <details>
         <summary>🔡 記号の全角・半角オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
-            <!-- JSで動的に保存・復元される -->
             <div class="opt-item"><span>％ パーセント</span><select id="opt_percent"><option value="zen">全角 ％</option><option value="han">半角 %</option></select></div>
             <div class="opt-item"><span>＆ アンパサンド</span><select id="opt_ampersand"><option value="zen">全角 ＆</option><option value="han">半角 &</option></select></div>
             <div class="opt-item"><span>（ ）カッコ</span><select id="opt_bracket"><option value="zen">全角 （ ）</option><option value="han">半角 ( )</option></select></div>
@@ -95,7 +93,6 @@
         </div>
     </details>
 
-    <!-- 3. リスト管理 -->
     <details id="listDetails">
         <summary>📚 除外・置換・プリセット管理</summary>
         <div class="details-content list-grid">
@@ -121,7 +118,7 @@
     <div class="controls">
         <div>
             校閲スタイル: 
-            <select id="activeStyle" class="style-select" onchange="updateStylePreview()">
+            <select id="activeStyle" class="style-select" onchange="handleStyleChange()">
                 <option value="none">なし (整形のみ)</option>
                 <option value="汎用（英名）">汎用（英名）</option>
                 <option value="汎用（和名）">汎用（和名）</option>
@@ -129,8 +126,8 @@
                 <option value="大山レポート">大山レポート</option>
             </select>
         </div>
-        <label class="compare-mode">
-            <input type="checkbox" id="compareMode" checked> 比較・注釈モード (原文【>修正】)
+        <label id="compareLabel" class="compare-mode disabled">
+            <input type="checkbox" id="compareMode" disabled> 比較・注釈モード (原文【>修正】)
         </label>
     </div>
 
@@ -163,7 +160,25 @@
             document.getElementById(id).addEventListener('change', saveSettings);
         });
         if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
+        handleStyleChange(); // 初期状態のUI更新
     };
+
+    // スタイルが切り替わった時のUI制御
+    function handleStyleChange() {
+        const style = document.getElementById('activeStyle').value;
+        const checkbox = document.getElementById('compareMode');
+        const label = document.getElementById('compareLabel');
+
+        if (style === 'none') {
+            checkbox.disabled = true;
+            checkbox.checked = false; // 整形のみの時は注釈を出さない
+            label.classList.add('disabled');
+        } else {
+            checkbox.disabled = false;
+            // 前回のチェック状態を思い出すなどの処理も可能ですが、一旦有効化のみ
+            label.classList.remove('disabled');
+        }
+    }
 
     function saveSettings() {
         localStorage.setItem('gh_token', document.getElementById('githubToken').value);
@@ -187,14 +202,12 @@
         navigator.clipboard.writeText(text).then(() => alert("コピーしました！"));
     }
 
-    // --- 同期コア関数 ---
     async function syncList(fileName, elementId) {
         const token = document.getElementById('githubToken').value;
         const user = document.getElementById('githubUser').value;
         const repo = document.getElementById('githubRepo').value;
         const textArea = document.getElementById(elementId);
         if(!token || !user || !repo) { alert("同期設定（トークン等）を入力してください"); return; }
-
         const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
         try {
             const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
@@ -202,7 +215,7 @@
                 const data = await res.json();
                 const remote = decodeURIComponent(escape(atob(data.content)));
                 if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
-                    if (confirm(`${fileName} をGitHubに「保存(上書き)」しますか？\n(キャンセルすると読み込みます)`)) {
+                    if (confirm(`${fileName} をGitHubに保存(上書き)しますか？\n(キャンセルすると読み込みます)`)) {
                         const putRes = await fetch(url, {
                             method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                             body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(textArea.value))), sha: data.sha })
@@ -212,32 +225,27 @@
                     }
                 }
                 textArea.value = remote; alert(`${fileName} を読み込みました`);
-            } else { alert("ファイルが見つかりません。GitHub上に作成してください。"); }
+            } else { alert("ファイルが見つかりません。"); }
         } catch (e) { alert("エラー: " + e.message); }
     }
 
-    // --- メインロジック ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
         const activeStyle = document.getElementById('activeStyle').value;
         
-        // 1. 下準備
         text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
 
-        // URL・時刻保護
         const protectedItems = [];
         text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => {
             const p = `__URL${protectedItems.length}__`; protectedItems.push({p, original: m}); return p;
         });
-        text = text.replace(/\d{1,2}:\d{2}/g, (m) => {
-            const p = `__TIME${protectedItems.length}__`; protectedItems.push({p, original: m}); return p;
+        text = text.replace(/\d{1,2}:\d (?:[0-9]{1,2})/g, (m) => { // 時刻保護を微調整
+             const p = `__TIME${protectedItems.length}__`; protectedItems.push({p, original: m}); return p;
         });
 
-        // 段落保護
         text = text.replace(/\n\s*　/g, '___ZEN_PARA___').replace(/\n\n+/g, '___DBL_PARA___');
 
-        // 2. 記号整形（オプション反映）
         const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
         text = text.replace(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
         text = text.replace(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
@@ -256,62 +264,46 @@
         text = text.replace(/．/g, '.').replace(/\uFF5E/g, '\u301C').replace(/[･・]/g, '・');
         text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
 
-        // 文中改行の結合
         text = text.replace(/\n/g, '');
 
-        // 3. 【校閲】置換ルールの適用
-        let replaceRules = [];
-        
-        // プリセットの読み込み
-        try {
-            const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
-            if (presets[activeStyle]) {
-                for (let key in presets[activeStyle]) {
-                    replaceRules.push({ from: key, to: presets[activeStyle][key] });
+        // --- 校閲スタイルが "none" の場合は置換を一切行わない ---
+        if (activeStyle !== 'none') {
+            let replaceRules = [];
+            try {
+                const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
+                if (presets[activeStyle]) {
+                    for (let key in presets[activeStyle]) {
+                        replaceRules.push({ from: key, to: presets[activeStyle][key] });
+                    }
                 }
-            }
-        } catch(e) { console.error("Preset JSON error"); }
+            } catch(e) { console.error("JSON error"); }
 
-        // 個別置換リストの読み込み
-        const manualReplace = document.getElementById('replaceList').value.split('\n');
-        manualReplace.forEach(line => {
-            const parts = line.split('>');
-            if (parts.length === 2) replaceRules.push({ from: parts[0].trim(), to: parts[1].trim() });
-        });
-
-        // 重複排除とソート（長い順）
-        replaceRules.sort((a, b) => b.from.length - a.from.length);
-
-        const occurrenceMap = new Map();
-        
-        replaceRules.forEach(rule => {
-            if (!rule.from) return;
-            // 国名プレフィックスのリセット（米、独などの重複防止用）
-            const prefixRegex = new RegExp(`[米独仏日英韓中]*${rule.from.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'g');
-            
-            text = text.replace(prefixRegex, (match) => {
-                // 初出判定
-                const count = (occurrenceMap.get(rule.from) || 0) + 1;
-                occurrenceMap.set(rule.from, count);
-                
-                // 初出/2回目以降の出し分け
-                let targetTo = rule.to;
-                if (rule.to.includes('|')) {
-                    const parts = rule.to.split('|').map(s => s.trim());
-                    targetTo = (count === 1) ? parts[0] : parts[1];
-                }
-
-                if (match === targetTo) return match; // 変化なし
-
-                if (isCompare) {
-                    return `${match}【>${targetTo}】`;
-                } else {
-                    return targetTo;
-                }
+            const manualReplace = document.getElementById('replaceList').value.split('\n');
+            manualReplace.forEach(line => {
+                const parts = line.split('>');
+                if (parts.length === 2) replaceRules.push({ from: parts[0].trim(), to: parts[1].trim() });
             });
-        });
 
-        // 4. 英数字バラバラ結合
+            replaceRules.sort((a, b) => b.from.length - a.from.length);
+            const occurrenceMap = new Map();
+            
+            replaceRules.forEach(rule => {
+                if (!rule.from) return;
+                const prefixRegex = new RegExp(`[米独仏日英韓中]*${rule.from.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'g');
+                text = text.replace(prefixRegex, (match) => {
+                    const count = (occurrenceMap.get(rule.from) || 0) + 1;
+                    occurrenceMap.set(rule.from, count);
+                    let targetTo = rule.to;
+                    if (rule.to.includes('|')) {
+                        const parts = rule.to.split('|').map(s => s.trim());
+                        targetTo = (count === 1) ? parts[0] : parts[1];
+                    }
+                    if (match === targetTo) return match;
+                    return isCompare ? `${match}【>${targetTo}】` : targetTo;
+                });
+            });
+        }
+
         let prev;
         do {
             prev = text;
@@ -320,16 +312,11 @@
             });
         } while (prev !== text);
 
-        // 日本語周辺スペース削除（半角のみ）
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
-
-        // 段落復活
         text = text.split('___ZEN_PARA___').join('\n\n　').split('___DBL_PARA___').join('\n\n');
 
-        // 保護復元
         protectedItems.forEach(item => { text = text.split(item.p).join(item.original); });
 
-        // 除外リスト(common_list)の復元
         const whitelist = document.getElementById('whitelist').value.split(',').map(s => s.trim()).filter(s => s !== "");
         whitelist.forEach(word => {
             const combined = word.replace(/\s+/g, '');
@@ -337,18 +324,15 @@
             text = text.replace(new RegExp(escaped, 'gi'), word);
         });
 
-        // 5. 仕上げ表示
         text = text.replace(/\n{3,}/g, '\n\n');
         const final = text.trim();
         
-        // 比較モードのタグを装飾して表示
         if (isCompare) {
             document.getElementById('output').innerHTML = final.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
         } else {
             document.getElementById('output').innerText = final;
         }
 
-        // カウント
         let zenkakuCount = 0;
         for (let i = 0; i < final.length; i++) {
             const c = final.charCodeAt(i);
