@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 決定版 v5</title>
+    <title>テキスト整形くん 決定版 v7</title>
     <style>
         :root {
             --bg-color: #f4f7f9;
@@ -16,6 +16,7 @@
             --accent-red: #dc3545;
             --config-bg: #fff3cd;
             --list-bg: #e2eefd;
+            --opt-bg: #f8f9fa;
         }
 
         body.dark-mode {
@@ -26,6 +27,7 @@
             --accent-blue: #3793ff;
             --config-bg: #3d3b30;
             --list-bg: #2a3544;
+            --opt-bg: #3a3a3a;
         }
 
         body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.4; }
@@ -37,6 +39,11 @@
         .config-area { background: var(--config-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.8rem; border: 1px solid #ffeeba; }
         .whitelist-area { background: var(--list-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px; }
         
+        /* オプション設定エリア */
+        .options-grid { background: var(--opt-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.85rem; border: 1px solid var(--border-color); }
+        .opt-item { display: flex; align-items: center; justify-content: space-between; }
+        .opt-item select { padding: 3px; font-size: 0.8rem; background: var(--container-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 3px; }
+
         .button-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 15px 0; }
         button { padding: 12px; cursor: pointer; background: var(--accent-blue); color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px; }
         button:hover { opacity: 0.8; }
@@ -61,10 +68,11 @@
         <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 決定版 v5</h1>
+    <h1>テキスト整形くん 決定版 v7</h1>
     
+    <!-- チーム同期設定 -->
     <details class="config-area">
-        <summary>🔧 チーム同期設定</summary>
+        <summary>🔧 チーム同期設定（管理者用）</summary>
         <div style="margin-top:10px;">
             GitHubトークン: <input type="password" id="githubToken" oninput="saveSettings()" style="width:70%;" placeholder="ここに貼り付け"><br>
             ユーザー名: <input type="text" id="githubUser" oninput="saveSettings()" value="sakumaaaaa">
@@ -72,9 +80,49 @@
         </div>
     </details>
 
+    <!-- 表記オプション -->
+    <div class="options-grid">
+        <div class="opt-item">
+            <span>％ (パーセント)</span>
+            <select id="opt_percent" onchange="saveSettings()">
+                <option value="zen">全角 ％</option>
+                <option value="han">半角 %</option>
+            </select>
+        </div>
+        <div class="opt-item">
+            <span>！ (感嘆符)</span>
+            <select id="opt_excl" onchange="saveSettings()">
+                <option value="zen">全角 ！</option>
+                <option value="han">半角 !</option>
+            </select>
+        </div>
+        <div class="opt-item">
+            <span>？ (疑問符)</span>
+            <select id="opt_quest" onchange="saveSettings()">
+                <option value="zen">全角 ？</option>
+                <option value="han">半角 ?</option>
+            </select>
+        </div>
+        <div class="opt-item">
+            <span>（ ）(カッコ)</span>
+            <select id="opt_bracket" onchange="saveSettings()">
+                <option value="zen">全角 （ ）</option>
+                <option value="han">半角 ( )</option>
+            </select>
+        </div>
+        <div class="opt-item">
+            <span>読点 (カンマ/テン)</span>
+            <select id="opt_comma" onchange="saveSettings()">
+                <option value="ten">テン 、</option>
+                <option value="comma">カンマ ，</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 除外リスト -->
     <div class="whitelist-area">
         <label><strong>除外リスト（[読込] ボタンで取得）</strong></label>
-        <textarea id="whitelist" style="height: 50px; margin-top:5px;" placeholder="ここに除外したい単語が読み込まれます"></textarea>
+        <textarea id="whitelist" style="height: 50px; margin-top:5px;"></textarea>
         <div style="display: flex; gap: 10px; margin-top:10px;">
             <button class="btn-sync" onclick="syncFromGitHub()" style="flex:1;">☁️ チームのリストを読込</button>
             <button class="btn-sync" onclick="syncToGitHub()" style="flex:1;">⬆️ 今のリストを全員に共有</button>
@@ -101,9 +149,18 @@
     const FILE_PATH = 'common_list.txt';
 
     window.onload = function() {
+        // 設定の復元
         document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
         if(localStorage.getItem('gh_user')) document.getElementById('githubUser').value = localStorage.getItem('gh_user');
         if(localStorage.getItem('gh_repo')) document.getElementById('githubRepo').value = localStorage.getItem('gh_repo');
+        
+        // オプション設定の復元
+        const opts = ['opt_percent', 'opt_excl', 'opt_quest', 'opt_bracket', 'opt_comma'];
+        opts.forEach(id => {
+            const val = localStorage.getItem(id);
+            if(val) document.getElementById(id).value = val;
+        });
+
         if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
     };
 
@@ -111,6 +168,12 @@
         localStorage.setItem('gh_token', document.getElementById('githubToken').value);
         localStorage.setItem('gh_user', document.getElementById('githubUser').value);
         localStorage.setItem('gh_repo', document.getElementById('githubRepo').value);
+        
+        // オプション保存
+        const opts = ['opt_percent', 'opt_excl', 'opt_quest', 'opt_bracket', 'opt_comma'];
+        opts.forEach(id => {
+            localStorage.setItem(id, document.getElementById(id).value);
+        });
     }
 
     function toggleDarkMode() {
@@ -158,7 +221,7 @@
         const user = document.getElementById('githubUser').value;
         const repo = document.getElementById('githubRepo').value;
         const content = document.getElementById('whitelist').value;
-        if (!token) { alert("トークンを入力してください"); return; }
+        if (!token) { alert("トークンが必要です"); return; }
         try {
             const url = `https://api.github.com/repos/${user}/${repo}/contents/${FILE_PATH}`;
             const getRes = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
@@ -176,14 +239,12 @@
         } catch (e) { alert("エラーが発生しました"); }
     }
 
-    /* 文字数カウントの更新 */
     function updateCounter(text) {
         const total = text.length;
         let zenkakuCount = 0;
         for (let i = 0; i < text.length; i++) {
             const c = text.charCodeAt(i);
-            // 半角(ASCII, 半角カタカナ)は0.5、それ以外は1としてカウント
-            if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f) || (c === 0xf8f1 || c === 0xf8f2 || c === 0xf8f3)) {
+            if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) {
                 zenkakuCount += 0.5;
             } else {
                 zenkakuCount += 1;
@@ -195,56 +256,68 @@
     function processText() {
         let text = document.getElementById('input').value;
 
-        // 0. 特殊空白の正規化
+        // 設定の取得
+        const optPercent = document.getElementById('opt_percent').value;
+        const optExcl = document.getElementById('opt_excl').value;
+        const optQuest = document.getElementById('opt_quest').value;
+        const optBracket = document.getElementById('opt_bracket').value;
+        const optComma = document.getElementById('opt_comma').value;
+
+        // 0. 特殊空白・行末空白の掃除
         text = text.replace(/[\t\u00A0]/g, ' ');
-        // 行末の余計な空白を削除（段落判定の邪魔になるため）
         text = text.replace(/[ ]+\n/g, '\n');
 
-        // ① 半角カッコ()を全角カッコ（）に
-        text = text.replace(/\(/g, '（').replace(/\)/g, '）');
-        // ② 波線置換 U+FF5E → U+301C
-        text = text.replace(/\uFF5E/g, '\u301C');
-        // ③④ 全角英数字を半角へ
-        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, function(s) {
-            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-        });
+        // 記号置換（全角・半角指定に基づく）
+        text = text.replace(/[％%]/g, optPercent === 'zen' ? '％' : '%');
+        text = text.replace(/[！!]/g, optExcl === 'zen' ? '！' : '!');
+        text = text.replace(/[？?]/g, optQuest === 'zen' ? '？' : '?');
+        
+        if (optBracket === 'zen') {
+            text = text.replace(/[\(\)]/g, s => s === '(' ? '（' : '）');
+        } else {
+            text = text.replace(/[（）]/g, s => s === '（' ? '(' : ')');
+        }
 
-        // ⑤ 段落の処理（改行＋全角スペースを保護）
+        if (optComma === 'comma') {
+            text = text.replace(/、/g, '，');
+        } else {
+            text = text.replace(/，/g, '、');
+        }
+
+        // 基本置換
+        text = text.replace(/．/g, '.');
+        text = text.replace(/\uFF5E/g, '\u301C'); // 波線
+        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+
+        // 段落処理
         text = text.replace(/\n[ 　]*　/g, '___PARA_BREAK___');
-        // 文の途中の改行を削除
         text = text.replace(/([^\n])\n([^\n])/g, '$1$2');
-        // 段落を復活（1行あける）
         text = text.replace(/___PARA_BREAK___/g, '\n\n　');
 
-        // 英数字バラバラ結合（1文字ルールの適用）
+        // 英数字バラバラ結合
         let prev;
         do {
             prev = text;
-            text = text.replace(/([a-zA-Z0-9])\s+([a-zA-Z0-9])/g, (match, p1, p2) => {
+            text = text.replace(/([a-zA-Z0-9.])\s+([a-zA-Z0-9.])/g, (match, p1, p2) => {
                 return (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2;
             });
         } while (prev !== text);
 
         // 日本語周辺のスペース削除
-        // ここで Infineon Technologies などのスペースが一旦消えるが、後でリストにより復元する
         text = text.replace(/([^\x00-\x7F])\s+/g, '$1');
         text = text.replace(/\s+([^\x00-\x7F])/g, '$1');
+        text = text.replace(/([、。，])\s+/g, '$1');
 
         // 除外リストの復元
         const whitelistStr = document.getElementById('whitelist').value;
         const whitelist = whitelistStr.split(',').map(s => s.trim()).filter(s => s !== "");
-        
         whitelist.forEach(word => {
             if (word.length === 0) return;
-            // スペースを除去した「結合済み単語」を作成（例: InfineonTechnologies）
             const combinedWord = word.replace(/\s+/g, '');
-            // 特殊文字をエスケープ
             const escapedCombined = combinedWord.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            // 結合された状態の単語を見つけたら、スペースありの正解に置き換える
             text = text.replace(new RegExp(escapedCombined, 'gi'), word);
         });
 
-        // 仕上げ
         text = text.replace(/\n{3,}/g, '\n\n');
         const finalResult = text.trim();
         document.getElementById('output').innerText = finalResult;
