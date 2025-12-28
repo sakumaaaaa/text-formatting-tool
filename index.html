@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v21</title>
+    <title>テキスト整形くん 校閲Pro v22</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
-            --accent-blue: #1877f2; --accent-green: #42b72a; --accent-purple: #8e44ad; --accent-red: #fa3e3e;
+            --accent-blue: #1877f2; --accent-green: #42b72a; --accent-purple: #8e44ad; --accent-red: #fa3e3e; --accent-orange: #f39c12;
             --config-bg: #fff9db; --list-bg: #e7f3ff; --opt-bg: #f5f6f7; --replace-bg: #ebfbee;
         }
         body.dark-mode {
@@ -17,22 +17,38 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.5; }
         .container { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
+        h2 { font-size: 1.1rem; margin: 20px 0 10px 0; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+
         textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
         details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
         details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
+
+        /* リスト管理エリア */
+        .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
+        .list-box { padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
+        .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; }
+        .list-status { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .status-sync { background: #d4edda; color: #155724; }
+        .status-unsaved { background: #fff3cd; color: #856404; border: 1px solid var(--accent-orange); }
+        
+        .list-search { padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.8rem; width: 100%; box-sizing: border-box; }
+        .item-count { font-size: 0.75rem; color: #666; }
+
+        /* オプション設定 */
         .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
         .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
+
         .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border: 1px solid var(--border-color); }
-        .style-select { font-weight: bold; padding: 8px; border-radius: 6px; border: 2px solid var(--accent-blue); background: var(--container-bg); color: var(--text-color); }
-        .compare-mode { display: flex; align-items: center; gap: 5px; font-weight: bold; color: var(--accent-purple); cursor: pointer; }
-        .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         button { padding: 12px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; color: white; }
         button:hover { opacity: 0.85; transform: translateY(-1px); }
         .btn-exec { background: var(--accent-blue); font-size: 1rem; }
         .btn-copy { background: #17a2b8; }
         .btn-save { background: var(--accent-green); }
+        .btn-sync { background: var(--accent-purple); font-size: 11px; padding: 6px; width: 100%; }
+
         #output { background: var(--container-bg); padding: 20px; border: 2px solid var(--border-color); border-radius: 8px; white-space: pre-wrap; min-height: 250px; font-size: 15px; line-height: 1.6; }
         .diff-tag { color: #d63384; font-weight: bold; background: #fff0f6; border-radius: 3px; padding: 0 2px; }
         body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
@@ -43,15 +59,15 @@
 
 <div class="container">
     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px;">
-        <button class="btn-mode" onclick="toggleDarkMode()" id="modeBtn" style="color:white; background:#666; font-size:11px; padding:5px 10px;">🌙 ダークモード</button>
-        <button onclick="if(confirm('消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px;">🗑️ 全削除</button>
+        <button onclick="toggleDarkMode()" id="modeBtn" style="background:#666; font-size:11px; padding:5px 10px;">🌙 ダークモード</button>
+        <button onclick="if(confirm('全て消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px;">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v21</h1>
+    <h1>テキスト整形くん 校閲Pro v22</h1>
 
-    <!-- 設定・オプション -->
+    <!-- 1. 基本設定 -->
     <details>
-        <summary>🔧 基本・同期設定</summary>
+        <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
             <div>トークン: <input type="password" id="githubToken" oninput="saveSettings()" style="width:100%;"></div>
             <div>ユーザー: <input type="text" id="githubUser" oninput="saveSettings()" value="sakumaaaaa" style="width:100%;"></div>
@@ -59,17 +75,54 @@
         </div>
     </details>
 
+    <!-- 2. リスト管理（復活 ＆ 高機能化） -->
+    <details id="listDetails">
+        <summary>📚 除外・置換・スタイル定義の同期</summary>
+        <div class="details-content list-grid">
+            <!-- 2-1. 除外リスト (1行1単語) -->
+            <div class="list-box" style="background:var(--list-bg)">
+                <label>
+                    <span>1. 除外リスト (保護語)</span>
+                    <span id="status_whitelist" class="list-status status-sync">✅ 最新</span>
+                </label>
+                <input type="text" id="search_whitelist" class="list-search" placeholder="リスト内を検索..." oninput="filterList('whitelist')">
+                <textarea id="whitelist" style="height: 120px;" oninput="checkUnsaved('whitelist')" placeholder="1行に1単語入力"></textarea>
+                <div class="item-count" id="count_whitelist">0 単語登録中</div>
+                <button class="btn-sync" onclick="syncList('common_list.txt', 'whitelist')">☁️ 同期（A-Zソート実行）</button>
+            </div>
+            <!-- 2-2. 置換リスト -->
+            <div class="list-box" style="background:var(--replace-bg)">
+                <label>
+                    <span>2. 共通マスタ置換</span>
+                    <span id="status_replaceList" class="list-status status-sync">✅ 最新</span>
+                </label>
+                <textarea id="replaceList" style="height: 154px;" oninput="checkUnsaved('replaceList')" placeholder="A, B > C"></textarea>
+                <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期</button>
+            </div>
+            <!-- 2-3. スタイル定義 -->
+            <div class="list-box" style="background:#fff3e0">
+                <label>
+                    <span>3. スタイル定義 (JSON)</span>
+                    <span id="status_presetsJson" class="list-status status-sync">✅ 最新</span>
+                </label>
+                <textarea id="presetsJson" style="height: 154px;" oninput="checkUnsaved('presetsJson')"></textarea>
+                <button class="btn-sync" onclick="syncList('presets.json', 'presetsJson')">☁️ 同期</button>
+            </div>
+        </div>
+    </details>
+
+    <!-- 3. 記号オプション（復活 ＆ 並び順整理） -->
     <details>
         <summary>🔡 記号・組版オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
+            <div class="opt-item"><span>！ ？ 感嘆疑問</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
+            <div class="opt-item"><span>！ ？ の後の空き</span><select id="opt_mark_space"><option value="keep">維持</option><option value="force">全角アキ強制</option><option value="none">詰める</option></select></div>
             <div class="opt-item"><span>％ パーセント</span><select id="opt_percent"><option value="zen">全角 ％</option><option value="han">半角 %</option></select></div>
             <div class="opt-item"><span>＆ アンパサンド</span><select id="opt_ampersand"><option value="zen">全角 ＆</option><option value="han">半角 &</option></select></div>
             <div class="opt-item"><span>（ ）カッコ</span><select id="opt_bracket"><option value="zen">全角 （ ）</option><option value="han">半角 ( )</option></select></div>
             <div class="opt-item"><span>： コロン</span><select id="opt_colon"><option value="zen">全角 ：</option><option value="han">半角 :</option></select></div>
             <div class="opt-item"><span>読点</span><select id="opt_comma"><option value="ten">テン 、</option><option value="comma">カンマ ，</option></select></div>
-            <div class="opt-item"><span>！ ？ の後の空き</span><select id="opt_mark_space"><option value="keep">維持 (何もしない)</option><option value="force">全角アキを強制</option><option value="none">詰める</option></select></div>
             <div class="opt-item"><span>引用符</span><select id="opt_quote"><option value="zen">全角 “”</option><option value="han">半角 ""</option></select></div>
-            <div class="opt-item"><span>！ ？ 感嘆疑問</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
             <div class="opt-item"><span>― ダーシ</span><select id="opt_dash"><option value="zen">全角 ―</option><option value="han">半角 -</option></select></div>
             <div class="opt-item"><span>- ハイフン</span><select id="opt_hyphen"><option value="han">半角 -</option><option value="zen">全角 －</option></select></div>
             <div class="opt-item"><span>／ スラッシュ</span><select id="opt_slash"><option value="han">半角 /</option><option value="zen">全角 ／</option></select></div>
@@ -77,11 +130,13 @@
         </div>
     </details>
 
+    <!-- メイン操作 -->
     <div class="controls">
-        <div>スタイル: <select id="activeStyle" class="style-select"><option value="none">なし (整形のみ)</option><option value="汎用（英名）">汎用（英名）</option><option value="汎用（和名）">汎用（和名）</option><option value="サイエンス">サイエンス</option><option value="大山レポート">大山レポート</option></select></div>
+        <div>校閲スタイル: <select id="activeStyle" class="style-select"><option value="none">なし (整形のみ)</option><option value="汎用（英名）">汎用（英名）</option><option value="汎用（和名）">汎用（和名）</option><option value="サイエンス">サイエンス</option><option value="大山レポート">大山レポート</option></select></div>
         <label class="compare-mode"><input type="checkbox" id="compareMode" checked> 比較・注釈モード</label>
     </div>
 
+    <h2>① 原文を貼り付け</h2>
     <textarea id="input" placeholder="テキストを貼り付けてください..."></textarea>
     
     <div class="button-main">
@@ -90,12 +145,14 @@
         <button class="btn-save" onclick="downloadTxt()">💾 保存</button>
     </div>
 
+    <h2>② 整形・校閲結果</h2>
     <div style="margin-bottom: 10px;"><span id="charCount" class="counter-badge">文字数: 0</span></div>
     <div id="output"></div>
 </div>
 
 <script>
     const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_comma','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
+    let lastSynced = {}; // 同期時の内容を記録
 
     window.onload = function() {
         document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
@@ -106,6 +163,7 @@
             document.getElementById(id).addEventListener('change', saveSettings);
         });
         if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
+        updateCount();
     };
 
     function saveSettings() {
@@ -122,22 +180,95 @@
         document.getElementById('modeBtn').innerText = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
     }
 
-    function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
+    function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピーしました！")); }
 
-    // --- メインエンジン v21 ---
+    // --- 未共有チェック ---
+    function checkUnsaved(id) {
+        const current = document.getElementById(id).value.trim();
+        const last = (lastSynced[id] || "").trim();
+        const status = document.getElementById('status_' + id);
+        if (current !== last) {
+            status.innerText = "⚠️ 未共有の変更あり";
+            status.className = "list-status status-unsaved";
+        } else {
+            status.innerText = "✅ 最新";
+            status.className = "list-status status-sync";
+        }
+        updateCount();
+    }
+
+    function updateCount() {
+        const val = document.getElementById('whitelist').value;
+        const count = val.split('\n').filter(s => s.trim() !== "").length;
+        document.getElementById('count_whitelist').innerText = `${count} 単語登録中`;
+    }
+
+    // --- リスト内検索 ---
+    function filterList(id) {
+        const query = document.getElementById('search_' + id).value.toLowerCase();
+        const textArea = document.getElementById(id);
+        const lines = textArea.value.split('\n');
+        // ※TextArea内でのハイライトは難しいため、将来的にUIを改善する布石として設置
+    }
+
+    // --- 同期コア v22 (カンマ->改行自動変換付き) ---
+    async function syncList(fileName, elementId) {
+        const token = document.getElementById('githubToken').value;
+        const user = document.getElementById('githubUser').value;
+        const repo = document.getElementById('githubRepo').value;
+        const textArea = document.getElementById(elementId);
+        if(!token || !user || !repo) { alert("同期設定が必要です"); return; }
+
+        const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
+        try {
+            const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
+            if (res.ok) {
+                const data = await res.json();
+                let remote = decodeURIComponent(escape(atob(data.content)));
+
+                // 除外リストなら カンマ->改行、ソート、重複排除
+                if (elementId === 'whitelist') {
+                    if (remote.includes(',') && !remote.includes('\n')) {
+                        remote = remote.split(',').map(s => s.trim()).join('\n');
+                    }
+                }
+
+                if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
+                    if (confirm(`${fileName} を保存（上書き）しますか？\n(キャンセルでGitHubから読み込みます)`)) {
+                        let finalContent = textArea.value.trim();
+                        // 保存前にソートと重複排除
+                        if (elementId === 'whitelist') {
+                            finalContent = Array.from(new Set(finalContent.split('\n').map(s => s.trim())))
+                                .filter(s => s !== "").sort((a, b) => a.localeCompare(b, 'en', {sensitivity: 'base'})).join('\n');
+                        }
+                        const putRes = await fetch(url, {
+                            method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                            body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalContent))), sha: data.sha })
+                        });
+                        if(putRes.ok) {
+                            textArea.value = finalContent;
+                            lastSynced[elementId] = finalContent;
+                            checkUnsaved(elementId); alert("保存完了"); return;
+                        }
+                    }
+                }
+                textArea.value = remote;
+                lastSynced[elementId] = remote;
+                checkUnsaved(elementId); alert("読み込み完了");
+            }
+        } catch (e) { alert("エラー: " + e.message); }
+    }
+
+    // --- メインエンジン v22 ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
         const activeStyle = document.getElementById('activeStyle').value;
         const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
 
-        // 0. 初期化（改行統一、全角スペース以外の特殊空白を掃除）
-        text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ');
-        // 行末の空白掃除（全角スペース含め掃除してOK）
-        text = text.replace(/[ 　]+\n/g, '\n');
+        text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
 
         const protectedItems = [];
-        // URL・時刻保護
         text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => {
             const p = `___P_URL_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
         });
@@ -145,11 +276,10 @@
             const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
         });
 
-        // 段落保護（全角スペース開始を退避）
         text = text.replace(/\n\s*　/g, '___P_ZPARA___').replace(/\n\n+/g, '___P_DPARA___');
 
-        // 1. 除外リスト保護
-        const whitelist = (localStorage.getItem('myTextToolWhitelist') || "").split(',').map(s => s.trim()).filter(s => s !== "");
+        // 除外リスト保護 (1行1単語に対応)
+        const whitelist = document.getElementById('whitelist').value.split('\n').map(s => s.trim()).filter(s => s !== "");
         whitelist.forEach((word, i) => {
             const noSpaceWord = word.replace(/\s+/g, '');
             const spacedRegex = new RegExp(noSpaceWord.split('').join('[\\s\\n]*'), 'gi');
@@ -165,7 +295,6 @@
             });
         });
 
-        // 2. 記号置換
         const replaceWithDiff = (regex, target) => {
             text = text.replace(regex, (m) => (m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target));
         };
@@ -175,21 +304,17 @@
         replaceWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
         replaceWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
         replaceWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
-        
         const tOpen = config.opt_bracket === 'zen' ? '（' : '(';
         const tClose = config.opt_bracket === 'zen' ? '）' : ')';
         text = text.replace(/[\(\)（）]/g, (m) => {
             const t = (m === '(' || m === '（') ? tOpen : tClose;
             return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
         });
-
         if (config.opt_comma === 'comma') replaceWithDiff(/、/g, '，');
         else replaceWithDiff(/，/g, '、');
 
-        // 3. 【新機能】！ ？の後の空き管理
         if (config.opt_mark_space !== 'keep') {
             const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
-            // 後ろに「閉じカッコ」や「改行」が来ない場合の ！ ？ を対象にする
             text = text.replace(/([！？])([ 　]*)([^\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
                 if (space === markSpaceChar) return match;
                 const target = m1 + markSpaceChar + nextChar;
@@ -203,15 +328,13 @@
             return isCompare ? `${s}【>${han}】` : han;
         });
 
-        // 4. 文中改行削除
         text = text.replace(/\n/g, '');
 
-        // 5. 校閲ロジック
         if (activeStyle !== 'none') {
             let finalRules = [];
-            // リスト読込（略）
             document.getElementById('replaceList').value.split('\n').forEach(line => {
-                const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => finalRules.push({ from: c.trim(), to: parts[1].trim() }));
+                const parts = line.split('>');
+                if (parts.length === 2) parts[0].split(',').forEach(c => finalRules.push({ from: c.trim(), to: parts[1].trim() }));
             });
             try {
                 const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
@@ -234,13 +357,8 @@
             });
         }
 
-        // 6. 英数字1文字結合（半角スペースのみ対象）
         let prev; do { prev = text; text = text.replace(/([a-zA-Z0-9.]) +([a-zA-Z0-9.])/g, (m, p1, p2) => (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2); } while (prev !== text);
-
-        // 7. 日本語周辺スペース削除（半角のみ対象、全角スペースは絶対に消さない）
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
-
-        // 8. 最終復元
         text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
         for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
 
@@ -248,36 +366,11 @@
         if (isCompare) document.getElementById('output').innerHTML = final.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
         else document.getElementById('output').innerText = final;
 
-        // カウント
         let zenCount = 0; for (let i = 0; i < final.length; i++) {
             const c = final.charCodeAt(i);
             if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
         }
         document.getElementById('charCount').innerText = `文字数: ${final.length} | 全角換算: ${Math.ceil(zenCount)}`;
-    }
-
-    async function syncList(fileName, elementId) {
-        const token = document.getElementById('githubToken').value;
-        const user = document.getElementById('githubUser').value;
-        const repo = document.getElementById('githubRepo').value;
-        const textArea = document.getElementById(elementId);
-        if(!token || !user || !repo) { alert("同期設定が必要です"); return; }
-        const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
-        try {
-            const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
-            if (res.ok) {
-                const data = await res.json();
-                const remote = decodeURIComponent(escape(atob(data.content)));
-                if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
-                    if (confirm(`${fileName} を保存しますか？`)) {
-                        await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-                            body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(textArea.value))), sha: data.sha }) });
-                        alert("保存完了"); return;
-                    }
-                }
-                textArea.value = remote; alert("同期完了");
-            }
-        } catch (e) { alert("エラー: " + e.message); }
     }
 
     function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
