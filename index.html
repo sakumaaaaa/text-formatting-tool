@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v16</title>
+    <title>テキスト整形くん 校閲Pro v17</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
@@ -59,9 +59,9 @@
         <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v16</h1>
+    <h1>テキスト整形くん 校閲Pro v17</h1>
 
-    <!-- 同期・設定 -->
+    <!-- 1. 同期設定 -->
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg);">
@@ -73,7 +73,7 @@
         </div>
     </details>
 
-    <!-- 記号オプション -->
+    <!-- 2. 記号オプション -->
     <details>
         <summary>🔡 記号の全角・半角オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
@@ -92,7 +92,7 @@
         </div>
     </details>
 
-    <!-- 各種リスト -->
+    <!-- 3. リスト管理 -->
     <details id="listDetails">
         <summary>📚 除外・置換・スタイル定義の同期</summary>
         <div class="details-content list-grid">
@@ -114,6 +114,7 @@
         </div>
     </details>
 
+    <!-- メイン操作 -->
     <div class="controls">
         <div>
             校閲スタイル: 
@@ -204,21 +205,21 @@
                         alert("保存しました"); return;
                     }
                 }
-                textArea.value = remote; alert("読み込みました");
+                textArea.value = remote; alert("同期完了");
             } else { alert("ファイルが見つかりません。"); }
         } catch (e) { alert("エラー: " + e.message); }
     }
 
-    // --- メインエンジン ---
+    // --- メインエンジン v17 ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
         const activeStyle = document.getElementById('activeStyle').value;
         
-        // 正規化
+        // 0. 正規化と基本掃除
         text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
 
-        // URL・時刻保護
+        // 1. URL・時刻保護
         const protectedItems = [];
         text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => {
             const p = `__URL${protectedItems.length}__`; protectedItems.push({p, original: m}); return p;
@@ -227,107 +228,12 @@
             const p = `__TIME${protectedItems.length}__`; protectedItems.push({p, original: m}); return p;
         });
 
-        // 段落保護
+        // 2. 段落保護
         text = text.replace(/\n\s*　/g, '___ZEN_PARA___').replace(/\n\n+/g, '___DBL_PARA___');
 
-        // 記号置換（注釈対応）
-        const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
+        // 3. 【重要】「整形（スペース詰め）」を先に行う（比較タグを汚さないため）
+        text = text.replace(/\n/g, ''); // 文中改行削除
         
-        const replaceWithDiff = (regex, target) => {
-            text = text.replace(regex, (m) => {
-                if (m === target) return m;
-                return isCompare ? `${m}【>${target}】` : target;
-            });
-        };
-
-        replaceWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
-        replaceWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
-        replaceWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
-        replaceWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
-        replaceWithDiff(/[：:]/g, config.opt_colon === 'zen' ? ' ：' : ':');
-        
-        if (config.opt_bracket === 'zen') replaceWithDiff(/[\(\)]/g, s => s === '(' ? '（' : '）');
-        else replaceWithDiff(/[（）]/g, s => s === '（' ? '(' : ')');
-        
-        if (config.opt_comma === 'comma') replaceWithDiff(/、/g, '，');
-        else replaceWithDiff(/，/g, '、');
-
-        text = text.replace(/．/g, isCompare ? '．【>.】' : '.');
-        text = text.replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
-        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => {
-            const han = String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-            return isCompare ? `${s}【>${han}】` : han;
-        });
-
-        // 改行削除
-        text = text.replace(/\n/g, '');
-
-        // --- 校閲ロジック (2層構造 + 初出判定) ---
-        let finalRules = [];
-        
-        // 1層目: マスタ (replace_list.txt)
-        const masterLines = document.getElementById('replaceList').value.split('\n');
-        masterLines.forEach(line => {
-            const parts = line.split('>');
-            if (parts.length === 2) {
-                const candidates = parts[0].split(',').map(s => s.trim());
-                candidates.forEach(c => finalRules.push({ from: c, to: parts[1].trim() }));
-            }
-        });
-
-        // 2層目: スタイル差分 (presets.json) - 上書き
-        if (activeStyle !== 'none') {
-            try {
-                const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
-                const styleData = presets[activeStyle] || {};
-                for (let key in styleData) {
-                    const candidates = key.split(',').map(s => s.trim());
-                    candidates.forEach(c => {
-                        // 既存のマスタルールを削除して上書き
-                        finalRules = finalRules.filter(r => r.from !== c);
-                        finalRules.push({ from: c, to: styleData[key] });
-                    });
-                }
-            } catch(e) { console.error("JSON error"); }
-        }
-
-        // 置換実行 (長い単語優先)
-        finalRules.sort((a, b) => b.from.length - a.from.length);
-        const occurrenceMap = new Map();
-
-        if (activeStyle !== 'none') {
-            finalRules.forEach(rule => {
-                if (!rule.from) return;
-                // 国名重複防止用のプレフィックス考慮
-                const regex = new RegExp(`[米独仏日英韓中]*${rule.from.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'g');
-                text = text.replace(regex, (match) => {
-                    const count = (occurrenceMap.get(rule.from) || 0) + 1;
-                    occurrenceMap.set(rule.from, count);
-                    let targetTo = rule.to;
-                    if (rule.to.includes('|')) {
-                        const parts = rule.to.split('|').map(s => s.trim());
-                        targetTo = (count === 1) ? parts[0] : parts[1];
-                    }
-                    if (match === targetTo) return match;
-                    return isCompare ? `${match}【>${targetTo}】` : targetTo;
-                });
-            });
-        }
-
-        // 泣き別れ結合 (除外リスト利用)
-        const whitelist = document.getElementById('whitelist').value.split(',').map(s => s.trim()).filter(s => s !== "");
-        whitelist.forEach(word => {
-            const combined = word.replace(/\s+/g, '');
-            // 単語がバラバラ（スペース混じり）な状態を探す正規表現
-            const spacedRegex = new RegExp(combined.split('').join('\\s*'), 'gi');
-            text = text.replace(spacedRegex, (match) => {
-                // 既に正しい(スペースが適切な)状態ならそのまま
-                if (match === word) return match;
-                // スペースが異常（泣き別れ）なら修正
-                return isCompare ? `${match}【>${word}】` : word;
-            });
-        });
-
         // 英数字1文字バラバラ結合
         let prev;
         do {
@@ -337,17 +243,97 @@
             });
         } while (prev !== text);
 
-        // 日本語周辺スペース削除
+        // 日本語周辺スペース削除（半角のみ）
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
 
-        // 復活処理
+        // 4. ここから「タグ付き置換（注釈）」を開始
+        const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
+        const replaceWithDiff = (regex, target) => {
+            text = text.replace(regex, (m) => {
+                if (m === target) return m;
+                return isCompare ? `${m}【>${target}】` : target;
+            });
+        };
+
+        // 記号オプション反映
+        replaceWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
+        replaceWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
+        replaceWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
+        replaceWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
+        replaceWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':'); // 余計なスペース削除済み
+        if (config.opt_bracket === 'zen') replaceWithDiff(/[\(\)]/g, s => s === '(' ? '（' : '）');
+        else replaceWithDiff(/[（）]/g, s => s === '（' ? '(' : ')');
+        if (config.opt_comma === 'comma') replaceWithDiff(/、/g, '，');
+        else replaceWithDiff(/，/g, '、');
+
+        // その他の強制置換
+        text = text.replace(/．/g, isCompare ? '．【>.】' : '.');
+        text = text.replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
+        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => {
+            const han = String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+            return isCompare ? `${s}【>${han}】` : han;
+        });
+
+        // 5. 校閲ロジック (スタイルが none 以外の場合)
+        if (activeStyle !== 'none') {
+            let finalRules = [];
+            // 共通マスタ
+            document.getElementById('replaceList').value.split('\n').forEach(line => {
+                const parts = line.split('>');
+                if (parts.length === 2) {
+                    parts[0].split(',').map(s => s.trim()).forEach(c => finalRules.push({ from: c, to: parts[1].trim() }));
+                }
+            });
+            // スタイル差分
+            try {
+                const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
+                const styleData = presets[activeStyle] || {};
+                for (let key in styleData) {
+                    key.split(',').map(s => s.trim()).forEach(c => {
+                        finalRules = finalRules.filter(r => r.from !== c);
+                        finalRules.push({ from: c, to: styleData[key] });
+                    });
+                }
+            } catch(e) {}
+
+            finalRules.sort((a, b) => b.from.length - a.from.length);
+            const occurrenceMap = new Map();
+            finalRules.forEach(rule => {
+                if (!rule.from) return;
+                const regex = new RegExp(`[米独仏日英韓中]*${rule.from.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'g');
+                text = text.replace(regex, (match) => {
+                    const count = (occurrenceMap.get(rule.from) || 0) + 1;
+                    occurrenceMap.set(rule.from, count);
+                    let targetTo = rule.to;
+                    if (rule.to.includes('|')) {
+                        const pts = rule.to.split('|').map(s => s.trim());
+                        targetTo = (count === 1) ? pts[0] : pts[1];
+                    }
+                    if (match === targetTo) return match;
+                    return isCompare ? `${match}【>${targetTo}】` : targetTo;
+                });
+            });
+        }
+
+        // 6. 泣き別れ結合（除外リストによるスペル修正）
+        const whitelist = document.getElementById('whitelist').value.split(',').map(s => s.trim()).filter(s => s !== "");
+        whitelist.forEach(word => {
+            const combined = word.replace(/\s+/g, '');
+            const spacedRegex = new RegExp(combined.split('').join('\\s*'), 'gi');
+            text = text.replace(spacedRegex, (match) => {
+                // タグ（【）が含まれている場合はスキップして壊さないようにする
+                if (match.includes('【')) return match;
+                if (match === word) return match;
+                return isCompare ? `${match}【>${word}】` : word;
+            });
+        });
+
+        // 7. 最終復元
         text = text.split('___ZEN_PARA___').join('\n\n　').split('___DBL_PARA___').join('\n\n');
         protectedItems.forEach(item => { text = text.split(item.p).join(item.original); });
 
-        text = text.replace(/\n{3,}/g, '\n\n');
+        // 表示
         const final = text.trim();
-        
-        // 描画
         if (isCompare) {
             document.getElementById('output').innerHTML = final.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
         } else {
