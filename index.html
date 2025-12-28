@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v22</title>
+    <title>テキスト整形くん 校閲Pro v23</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
@@ -17,25 +17,23 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.5; }
         .container { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
-        h2 { font-size: 1.1rem; margin: 20px 0 10px 0; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        h2 { font-size: 1.1rem; margin: 25px 0 10px 0; font-weight: bold; border-bottom: 2px solid var(--accent-blue); padding-bottom: 5px; display: block; }
 
         textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
         details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
         details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
 
-        /* リスト管理エリア */
         .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
         .list-box { padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
-        .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; }
+        .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .list-status { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .status-sync { background: #d4edda; color: #155724; }
         .status-unsaved { background: #fff3cd; color: #856404; border: 1px solid var(--accent-orange); }
         
-        .list-search { padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.8rem; width: 100%; box-sizing: border-box; }
+        .list-search { padding: 6px; border-radius: 4px; border: 2px solid var(--accent-blue); font-size: 0.8rem; width: 100%; box-sizing: border-box; outline: none; }
         .item-count { font-size: 0.75rem; color: #666; }
 
-        /* オプション設定 */
         .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
         .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
@@ -59,11 +57,11 @@
 
 <div class="container">
     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px;">
-        <button onclick="toggleDarkMode()" id="modeBtn" style="background:#666; font-size:11px; padding:5px 10px;">🌙 ダークモード</button>
-        <button onclick="if(confirm('全て消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px;">🗑️ 全削除</button>
+        <button onclick="toggleDarkMode()" id="modeBtn" style="background:#666; font-size:11px; padding:5px 10px; color:white; border-radius:4px; cursor:pointer;">🌙 ダークモード</button>
+        <button onclick="if(confirm('全て消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v22</h1>
+    <h1>テキスト整形くん 校閲Pro v23</h1>
 
     <!-- 1. 基本設定 -->
     <details>
@@ -75,22 +73,20 @@
         </div>
     </details>
 
-    <!-- 2. リスト管理（復活 ＆ 高機能化） -->
+    <!-- 2. リスト管理 -->
     <details id="listDetails">
         <summary>📚 除外・置換・スタイル定義の同期</summary>
         <div class="details-content list-grid">
-            <!-- 2-1. 除外リスト (1行1単語) -->
             <div class="list-box" style="background:var(--list-bg)">
                 <label>
                     <span>1. 除外リスト (保護語)</span>
                     <span id="status_whitelist" class="list-status status-sync">✅ 最新</span>
                 </label>
-                <input type="text" id="search_whitelist" class="list-search" placeholder="リスト内を検索..." oninput="filterList('whitelist')">
-                <textarea id="whitelist" style="height: 120px;" oninput="checkUnsaved('whitelist')" placeholder="1行に1単語入力"></textarea>
+                <input type="text" id="search_whitelist" class="list-search" placeholder="単語を検索..." oninput="filterList()">
+                <textarea id="whitelist" style="height: 120px;" oninput="onListInput()" placeholder="1行に1単語"></textarea>
                 <div class="item-count" id="count_whitelist">0 単語登録中</div>
                 <button class="btn-sync" onclick="syncList('common_list.txt', 'whitelist')">☁️ 同期（A-Zソート実行）</button>
             </div>
-            <!-- 2-2. 置換リスト -->
             <div class="list-box" style="background:var(--replace-bg)">
                 <label>
                     <span>2. 共通マスタ置換</span>
@@ -99,7 +95,6 @@
                 <textarea id="replaceList" style="height: 154px;" oninput="checkUnsaved('replaceList')" placeholder="A, B > C"></textarea>
                 <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期</button>
             </div>
-            <!-- 2-3. スタイル定義 -->
             <div class="list-box" style="background:#fff3e0">
                 <label>
                     <span>3. スタイル定義 (JSON)</span>
@@ -111,7 +106,7 @@
         </div>
     </details>
 
-    <!-- 3. 記号オプション（復活 ＆ 並び順整理） -->
+    <!-- 3. 記号オプション -->
     <details>
         <summary>🔡 記号・組版オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
@@ -130,7 +125,6 @@
         </div>
     </details>
 
-    <!-- メイン操作 -->
     <div class="controls">
         <div>校閲スタイル: <select id="activeStyle" class="style-select"><option value="none">なし (整形のみ)</option><option value="汎用（英名）">汎用（英名）</option><option value="汎用（和名）">汎用（和名）</option><option value="サイエンス">サイエンス</option><option value="大山レポート">大山レポート</option></select></div>
         <label class="compare-mode"><input type="checkbox" id="compareMode" checked> 比較・注釈モード</label>
@@ -152,7 +146,8 @@
 
 <script>
     const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_comma','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
-    let lastSynced = {}; // 同期時の内容を記録
+    let lastSynced = {}; 
+    let masterWhitelist = []; // 検索用に全データを保持
 
     window.onload = function() {
         document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
@@ -163,7 +158,6 @@
             document.getElementById(id).addEventListener('change', saveSettings);
         });
         if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
-        updateCount();
     };
 
     function saveSettings() {
@@ -180,7 +174,17 @@
         document.getElementById('modeBtn').innerText = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
     }
 
-    function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピーしました！")); }
+    function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
+
+    // --- 除外リスト専用の入力管理 ---
+    function onListInput() {
+        // 検索中に入力された場合は、マスタを更新
+        const query = document.getElementById('search_whitelist').value.toLowerCase();
+        if (query === "") {
+            masterWhitelist = document.getElementById('whitelist').value.split('\n');
+        }
+        checkUnsaved('whitelist');
+    }
 
     // --- 未共有チェック ---
     function checkUnsaved(id) {
@@ -194,7 +198,7 @@
             status.innerText = "✅ 最新";
             status.className = "list-status status-sync";
         }
-        updateCount();
+        if (id === 'whitelist') updateCount();
     }
 
     function updateCount() {
@@ -203,15 +207,40 @@
         document.getElementById('count_whitelist').innerText = `${count} 単語登録中`;
     }
 
-    // --- リスト内検索 ---
-    function filterList(id) {
-        const query = document.getElementById('search_' + id).value.toLowerCase();
-        const textArea = document.getElementById(id);
-        const lines = textArea.value.split('\n');
-        // ※TextArea内でのハイライトは難しいため、将来的にUIを改善する布石として設置
+    // --- 【改善】リスト内検索機能 ---
+    function filterList() {
+        const query = document.getElementById('search_whitelist').value.toLowerCase();
+        const textArea = document.getElementById('whitelist');
+        
+        // 検索が空なら全表示
+        if (query === "") {
+            textArea.value = masterWhitelist.join('\n');
+            textArea.readOnly = false;
+            textArea.style.opacity = "1";
+        } else {
+            // フィルタリング実行
+            const filtered = masterWhitelist.filter(line => line.toLowerCase().includes(query));
+            textArea.value = filtered.join('\n');
+            textArea.readOnly = true; // フィルタ中は編集不可（誤消去防止）
+            textArea.style.opacity = "0.7";
+        }
     }
 
-    // --- 同期コア v22 (カンマ->改行自動変換付き) ---
+    // --- 強制ソートロジック ---
+    function cleanAndSort(text) {
+        let lines = [];
+        if (text.includes(',') && !text.includes('\n')) {
+            lines = text.split(',').map(s => s.trim());
+        } else {
+            lines = text.split('\n').map(s => s.trim());
+        }
+        // 重複排除とソート（英語・日本語混在対応）
+        return Array.from(new Set(lines))
+            .filter(s => s !== "")
+            .sort((a, b) => a.localeCompare(b, 'en', {sensitivity: 'base'}));
+    }
+
+    // --- 同期コア v23 ---
     async function syncList(fileName, elementId) {
         const token = document.getElementById('githubToken').value;
         const user = document.getElementById('githubUser').value;
@@ -224,42 +253,44 @@
             const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
             if (res.ok) {
                 const data = await res.json();
-                let remote = decodeURIComponent(escape(atob(data.content)));
-
-                // 除外リストなら カンマ->改行、ソート、重複排除
+                let remoteRaw = decodeURIComponent(escape(atob(data.content)));
+                
+                // 読込時：強制ソート
+                let processedContent = remoteRaw;
                 if (elementId === 'whitelist') {
-                    if (remote.includes(',') && !remote.includes('\n')) {
-                        remote = remote.split(',').map(s => s.trim()).join('\n');
-                    }
+                    masterWhitelist = cleanAndSort(remoteRaw);
+                    processedContent = masterWhitelist.join('\n');
                 }
 
-                if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
-                    if (confirm(`${fileName} を保存（上書き）しますか？\n(キャンセルでGitHubから読み込みます)`)) {
-                        let finalContent = textArea.value.trim();
-                        // 保存前にソートと重複排除
+                // 差分がある、または空でない場合
+                if (textArea.value.trim() !== "" && textArea.value.trim() !== processedContent.trim()) {
+                    if (confirm(`${fileName} をGitHubに保存(ソート実行)しますか？\n(キャンセルで読込)`)) {
+                        let finalToSave = textArea.value;
                         if (elementId === 'whitelist') {
-                            finalContent = Array.from(new Set(finalContent.split('\n').map(s => s.trim())))
-                                .filter(s => s !== "").sort((a, b) => a.localeCompare(b, 'en', {sensitivity: 'base'})).join('\n');
+                            masterWhitelist = cleanAndSort(textArea.value);
+                            finalToSave = masterWhitelist.join('\n');
                         }
                         const putRes = await fetch(url, {
                             method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-                            body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalContent))), sha: data.sha })
+                            body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha })
                         });
                         if(putRes.ok) {
-                            textArea.value = finalContent;
-                            lastSynced[elementId] = finalContent;
-                            checkUnsaved(elementId); alert("保存完了"); return;
+                            textArea.value = finalToSave;
+                            lastSynced[elementId] = finalToSave;
+                            checkUnsaved(elementId); alert("保存＆ソート完了"); return;
                         }
                     }
                 }
-                textArea.value = remote;
-                lastSynced[elementId] = remote;
-                checkUnsaved(elementId); alert("読み込み完了");
+                textArea.value = processedContent;
+                lastSynced[elementId] = processedContent;
+                checkUnsaved(elementId); 
+                if (elementId === 'whitelist') document.getElementById('search_whitelist').value = ""; // 検索リセット
+                alert("最新データを読み込み、A-Zソートしました");
             }
         } catch (e) { alert("エラー: " + e.message); }
     }
 
-    // --- メインエンジン v22 ---
+    // --- メインエンジン (v20〜22の魂を継承) ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
@@ -275,11 +306,11 @@
         text = text.replace(/\d{1,2}:\d{2}/g, (m) => {
             const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
         });
-
         text = text.replace(/\n\s*　/g, '___P_ZPARA___').replace(/\n\n+/g, '___P_DPARA___');
 
-        // 除外リスト保護 (1行1単語に対応)
-        const whitelist = document.getElementById('whitelist').value.split('\n').map(s => s.trim()).filter(s => s !== "");
+        // 除外リスト保護
+        const whitelistContent = document.getElementById('whitelist').value;
+        const whitelist = whitelistContent.split('\n').map(s => s.trim()).filter(s => s !== "");
         whitelist.forEach((word, i) => {
             const noSpaceWord = word.replace(/\s+/g, '');
             const spacedRegex = new RegExp(noSpaceWord.split('').join('[\\s\\n]*'), 'gi');
@@ -298,7 +329,6 @@
         const replaceWithDiff = (regex, target) => {
             text = text.replace(regex, (m) => (m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target));
         };
-
         replaceWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
         replaceWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
         replaceWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
@@ -312,7 +342,6 @@
         });
         if (config.opt_comma === 'comma') replaceWithDiff(/、/g, '，');
         else replaceWithDiff(/，/g, '、');
-
         if (config.opt_mark_space !== 'keep') {
             const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
             text = text.replace(/([！？])([ 　]*)([^\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
@@ -321,7 +350,6 @@
                 return isCompare ? `${match}【>${target}】` : target;
             });
         }
-
         text = text.replace(/．/g, isCompare ? '．【>.】' : '.').replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
         text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => {
             const han = String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
