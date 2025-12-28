@@ -1,1 +1,25 @@
-{}
+{
+  "サイエンス": {
+    "ウエハ": "ウエハー",
+    "メモリ": "メモリー",
+    "Apple": "アップル社",
+    "Infineon Technologies": "独インフィニオン社",
+    "DuPont": "独デュポン社"
+  },
+  "大山レポート": {
+    "Apple": "米Apple | Apple",
+    "Infineon Technologies": "独Infineon Technologies | Infineon Technologies",
+    "DuPont": "独DuPont | DuPont",
+    "STMicroelectronics": "スイスSTMicroelectronics | STMicroelectronics"
+  },
+  "汎用（英名）": {
+    "アップル": "Apple",
+    "インフィニオン": "Infineon Technologies",
+    "デュポン": "DuPont"
+  },
+  "汎用（和名）": {
+    "Apple": "アップル",
+    "Infineon": "インフィニオン",
+    "DuPont": "デュポン"
+  }
+}
