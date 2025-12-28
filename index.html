@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v18</title>
+    <title>テキスト整形くん 校閲Pro v19</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
@@ -22,7 +22,7 @@
         details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
         .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
-        .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .opt-item { display: flex; align-items: center; justify(content: space-between); padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
         .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
         .list-box { padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); }
@@ -52,8 +52,9 @@
         <button class="btn-clear" onclick="clearAll()">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v18</h1>
+    <h1>テキスト整形くん 校閲Pro v19</h1>
 
+    <!-- 1. 同期設定 -->
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg);">
@@ -65,6 +66,7 @@
         </div>
     </details>
 
+    <!-- 2. 表記オプション -->
     <details>
         <summary>🔡 記号の全角・半角オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
@@ -83,6 +85,7 @@
         </div>
     </details>
 
+    <!-- 3. リスト管理 -->
     <details id="listDetails">
         <summary>📚 各種リストの同期</summary>
         <div class="details-content list-grid">
@@ -110,7 +113,7 @@
     </div>
 
     <div class="label-row">① 原文を貼り付け</div>
-    <textarea id="input" placeholder="ここに貼り付け..."></textarea>
+    <textarea id="input" placeholder="テキストを貼り付けてください..."></textarea>
     
     <div class="button-main">
         <button class="btn-exec" onclick="processText()">✨ 整形・校閲を実行</button>
@@ -118,7 +121,7 @@
         <button class="btn-save" onclick="downloadTxt()">💾 保存</button>
     </div>
 
-    <div class="label-row"><span>② 結果</span><span id="charCount" class="counter-badge">文字数: 0 | 全角換算: 0</span></div>
+    <div class="label-row"><span>② 整形・校閲結果</span><span id="charCount" class="counter-badge">文字数: 0 | 全角換算: 0</span></div>
     <div id="output"></div>
 </div>
 
@@ -150,7 +153,7 @@
         document.getElementById('modeBtn').innerText = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
     }
 
-    function clearAll() { if(confirm("全て消去しますか？")) { document.getElementById('input').value = ""; document.getElementById('output').innerText = ""; } }
+    function clearAll() { if(confirm("消去しますか？")) { document.getElementById('input').value = ""; document.getElementById('output').innerText = ""; } }
     function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
 
     async function syncList(fileName, elementId) {
@@ -166,7 +169,7 @@
                 const data = await res.json();
                 const remote = decodeURIComponent(escape(atob(data.content)));
                 if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
-                    if (confirm(`${fileName} をGitHubに保存しますか？`)) {
+                    if (confirm(`${fileName} を保存しますか？`)) {
                         await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                             body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(textArea.value))), sha: data.sha }) });
                         alert("保存完了"); return;
@@ -177,29 +180,60 @@
         } catch (e) { alert("エラー: " + e.message); }
     }
 
-    // --- メインエンジン v18 ---
+    // --- メインエンジン v19 ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
         const activeStyle = document.getElementById('activeStyle').value;
         const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
 
-        // 0. 初期化
+        // 0. 初期正規化
         text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
 
-        // 1. URL・時刻保護
+        // URL・時刻保護
         const protectedItems = [];
         text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => {
-            const p = `__URL${protectedItems.length}__`; protectedItems.push({p, original: m}); return p;
+            const p = `___P_URL_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
         });
         text = text.replace(/\d{1,2}:\d{2}/g, (m) => {
-            const p = `__TIME${protectedItems.length}__`; protectedItems.push({p, original: m}); return p;
+            const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
         });
 
-        // 2. 段落保護
-        text = text.replace(/\n\s*　/g, '___ZEN_PARA___').replace(/\n\n+/g, '___DBL_PARA___');
+        // 段落保護
+        text = text.replace(/\n\s*　/g, '___P_ZPARA___').replace(/\n\n+/g, '___P_DPARA___');
 
-        // 3. 【重要】記号オプションの「注釈あり」置換
+        // 1. 【最重要】除外リスト（スペル修正・保護）
+        // 泣き別れを直しつつ、その単語を保護カプセルに入れて「後のスペース削除」から守る
+        const whitelist = document.getElementById('whitelist').value.split(',').map(s => s.trim()).filter(s => s !== "");
+        whitelist.forEach((word, i) => {
+            const noSpaceWord = word.replace(/\s+/g, '');
+            // 改行や空白を含めてその単語を探す
+            const spacedRegex = new RegExp(noSpaceWord.split('').join('[\\s\\n]*'), 'gi');
+            
+            text = text.replace(spacedRegex, (match) => {
+                if (match.includes('___P_')) return match; // 既に保護済み
+
+                const hasNewline = match.includes('\n');
+                const matchNoSpace = match.replace(/[\s\n]+/g, '');
+                
+                let resultWord = word;
+                // 文字が同じで、かつ改行が含まれていたなら「PDF由来」としてサイレント結合
+                // そうでなければ、あるいは文字自体が違えばタグを出す
+                if (matchNoSpace.toLowerCase() === noSpaceWord.toLowerCase() && hasNewline) {
+                    resultWord = word; // サイレント
+                } else if (match === word) {
+                    resultWord = word; // 最初から正しい
+                } else {
+                    resultWord = isCompare ? `${match}【>${word}】` : word;
+                }
+                
+                const p = `___P_WL_${i}_${Math.random().toString(36).slice(-4)}___`;
+                protectedItems.push({p, val: resultWord});
+                return p;
+            });
+        });
+
+        // 2. 記号オプションの置換
         const replaceWithDiff = (regex, target) => {
             text = text.replace(regex, (m) => (m === target) ? m : (isCompare ? `${m}【>${target}】` : target));
         };
@@ -220,32 +254,10 @@
             return isCompare ? `${s}【>${han}】` : han;
         });
 
-        // 4. 文中改行を一旦削除
+        // 3. 基本整形（文中の改行削除など）
         text = text.replace(/\n/g, '');
 
-        // 5. 除外リスト（スペル・スペース修正）の「インテリジェント」処理
-        const whitelist = document.getElementById('whitelist').value.split(',').map(s => s.trim()).filter(s => s !== "");
-        whitelist.forEach(word => {
-            const noSpaceWord = word.replace(/\s+/g, '');
-            // 単語がバラバラ（スペース混じり）な状態を探す正規表現
-            const spacedRegex = new RegExp(noSpaceWord.split('').join('\\s*'), 'gi');
-            
-            text = text.replace(spacedRegex, (match) => {
-                if (match.includes('【')) return match; // 既に注釈化されている場所は飛ばす
-                
-                // 文字（スペル）自体が一致しているか確認
-                const matchNoSpace = match.replace(/\s+/g, '');
-                if (matchNoSpace.toLowerCase() === noSpaceWord.toLowerCase()) {
-                    // 【解決策】文字が同じならサイレント修正（タグなし）
-                    return word;
-                } else {
-                    // 文字が違うならタグを出す
-                    return isCompare ? `${match}【>${word}】` : word;
-                }
-            });
-        });
-
-        // 6. 校閲ロジック（スタイル別置換）
+        // 4. 校閲ロジック（スタイル別置換）
         if (activeStyle !== 'none') {
             let finalRules = [];
             document.getElementById('replaceList').value.split('\n').forEach(line => {
@@ -266,7 +278,7 @@
                 if (!rule.from) return;
                 const regex = new RegExp(`[米独仏日英韓中]*${rule.from.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'g');
                 text = text.replace(regex, (match) => {
-                    if (match.includes('【')) return match;
+                    if (match.includes('___P_')) return match;
                     const count = (occurrenceMap.get(rule.from) || 0) + 1;
                     occurrenceMap.set(rule.from, count);
                     let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
@@ -275,17 +287,20 @@
             });
         }
 
-        // 7. 英数字1文字バラバラ結合
+        // 5. 英数字1文字バラバラ結合（保護された単語以外が対象）
         let prev; do { prev = text; text = text.replace(/([a-zA-Z0-9.])\s+([a-zA-Z0-9.])/g, (m, p1, p2) => (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2); } while (prev !== text);
 
-        // 8. 日本語周辺スペース削除（半角のみ）
+        // 6. 日本語周辺スペース削除（半角のみ）
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
 
-        // 9. 復活処理
-        text = text.split('___ZEN_PARA___').join('\n\n　').split('___DBL_PARA___').join('\n\n');
-        protectedItems.forEach(item => { text = text.split(item.p).join(item.original); });
+        // 7. 全ての保護を解除
+        text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
+        // 保護アイテムを逆順に復元（入れ子対策）
+        for (let i = protectedItems.length - 1; i >= 0; i--) {
+            text = text.split(protectedItems[i].p).join(protectedItems[i].val);
+        }
 
-        // 表示描画
+        // 表示
         const final = text.replace(/\n{3,}/g, '\n\n').trim();
         if (isCompare) document.getElementById('output').innerHTML = final.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
         else document.getElementById('output').innerText = final;
