@@ -3,25 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v26</title>
+    <title>テキスト整形くん 校閲Pro v27</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
             --accent-blue: #1877f2; --accent-green: #42b72a; --accent-purple: #8e44ad; --accent-red: #fa3e3e; --accent-orange: #f39c12;
-            --config-bg: #fff9db; --list-bg: #e7f3ff; --opt-bg: #f5f6f7; --replace-bg: #ebfbee;
+            --config-bg: #fff9db; --list-bg: #e7f3ff; --opt-bg: #f5f6f7; --replace-bg: #ebfbee; --presets-bg: #fff3e0;
         }
         body.dark-mode {
             --bg-color: #18191a; --container-bg: #242526; --text-color: #e4e6eb; --border-color: #3e4042;
-            --accent-blue: #4599ff; --config-bg: #3a3b3c; --list-bg: #263951; --opt-bg: #303031; --replace-bg: #2d3d2d;
+            --accent-blue: #4599ff; --config-bg: #3a3b3c; --list-bg: #263951; --opt-bg: #303031; --replace-bg: #2d3d2d; --presets-bg: #423629;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.5; }
         .container { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
         h2 { font-size: 1.1rem; margin: 25px 0 10px 0; font-weight: bold; border-bottom: 2px solid var(--accent-blue); padding-bottom: 5px; display: block; }
+
         textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
         details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
         details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
+
         .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
         .list-box { padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
         .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
@@ -30,14 +32,16 @@
         .status-sync { background: #d4edda; color: #155724; }
         .status-unsaved { background: #fff3cd; color: #856404; border: 1px solid var(--accent-orange); }
         
-        /* 置換案アシスタントのスタイル */
-        .assist-panel { background: #fff3e0; border: 1px solid #ffe0b2; padding: 15px; border-radius: 6px; margin-top: 5px; display: none; }
-        .assist-title { font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; color: #e67e22; }
-        .assist-list { max-height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; padding: 10px; border-radius: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .assist-panel { background: var(--presets-bg); border: 1px solid var(--accent-orange); padding: 15px; border-radius: 6px; margin-top: 5px; display: none; }
+        .assist-title { font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; }
+        .assist-list { max-height: 200px; overflow-y: auto; background: var(--container-bg); border: 1px solid var(--border-color); padding: 10px; border-radius: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
         .assist-item { font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
-        .assist-item input { cursor: pointer; }
-        .assist-buttons { display: flex; gap: 10px; margin-top: 10px; }
 
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
+        .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
+
+        .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border: 1px solid var(--border-color); }
         .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         button { padding: 12px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; color: white; }
         button:hover { opacity: 0.85; transform: translateY(-1px); }
@@ -46,6 +50,7 @@
         .btn-save { background: var(--accent-green); }
         .btn-sync { background: var(--accent-purple); font-size: 11px; padding: 6px; width: 100%; }
         .btn-assist { background: #e67e22; font-size: 11px; padding: 6px; width: 100%; }
+
         #output { background: var(--container-bg); padding: 20px; border: 2px solid var(--border-color); border-radius: 8px; white-space: pre-wrap; min-height: 250px; font-size: 15px; line-height: 1.6; }
         .diff-tag { color: #d63384; font-weight: bold; background: #fff0f6; border-radius: 3px; padding: 0 2px; }
         body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
@@ -60,9 +65,8 @@
         <button onclick="if(confirm('全て消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v26</h1>
+    <h1>テキスト整形くん 校閲Pro v27</h1>
 
-    <!-- 基本設定 -->
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
@@ -72,9 +76,8 @@
         </div>
     </details>
 
-    <!-- リスト管理 -->
     <details id="listDetails">
-        <summary>📚 各種リストの同期</summary>
+        <summary>📚 各種リストの同期・管理</summary>
         <div class="details-content list-grid">
             <div class="list-box" style="background:var(--list-bg)">
                 <label><span>1. 除外リスト</span><span id="status_whitelist" class="list-status status-init">☁️ 未読込</span></label>
@@ -85,21 +88,18 @@
             <div class="list-box" style="background:var(--replace-bg)">
                 <label><span>2. 共通マスタ置換</span><span id="status_replaceList" class="list-status status-init">☁️ 未読込</span></label>
                 <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList')"></textarea>
-                <button class="btn-assist" onclick="suggestRules()">📋 原稿から置換案を抽出</button>
-                
-                <!-- 置換案アシスタントパネル -->
+                <button class="btn-assist" onclick="suggestRules()">📋 整形結果から置換案を抽出</button>
                 <div id="assistPanel" class="assist-panel">
-                    <div class="assist-title">🔍 抽出された置換案（チェックしたものを追加）</div>
+                    <div class="assist-title">🔍 置換案（チェックしたものを追加）</div>
                     <div id="assistList" class="assist-list"></div>
-                    <div class="assist-buttons">
-                        <button onclick="applySuggestions()" style="background:var(--accent-green); font-size:10px; padding:5px;">✅ 選択した案を追加</button>
-                        <button onclick="document.getElementById('assistPanel').style.display='none'" style="background:#999; font-size:10px; padding:5px;">キャンセル</button>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button onclick="applySuggestions()" style="background:var(--accent-green); font-size:10px; padding:5px;">✅ 追加</button>
+                        <button onclick="document.getElementById('assistPanel').style.display='none'" style="background:#999; font-size:10px; padding:5px;">閉じる</button>
                     </div>
                 </div>
-
                 <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期（ソート）</button>
             </div>
-            <div class="list-box" style="background:#fff3e0">
+            <div class="list-box" style="background:var(--presets-bg)">
                 <label><span>3. スタイル定義 (JSON)</span><span id="status_presetsJson" class="list-status status-init">☁️ 未読込</span></label>
                 <textarea id="presetsJson" style="height: 184px;" oninput="checkUnsaved('presetsJson')"></textarea>
                 <button class="btn-sync" onclick="syncList('presets.json', 'presetsJson')">☁️ 同期</button>
@@ -107,7 +107,6 @@
         </div>
     </details>
 
-    <!-- 記号オプション -->
     <details>
         <summary>🔡 記号・組版オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
@@ -147,7 +146,7 @@
 
 <script>
     const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_comma','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
-    let lastSynced = {}; let masterWhitelist = []; 
+    let lastSynced = {}; let masterWhitelist = [];
 
     window.onload = function() {
         document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
@@ -194,28 +193,19 @@
         else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
     }
 
-    // --- カタカナ抽出アシスタント v26 ---
     let currentSuggestions = [];
     function suggestRules() {
-        const input = document.getElementById('input').value;
-        if(!input) { alert("原文を貼り付けてから実行してください"); return; }
+        const outputText = document.getElementById('output').innerText;
+        if(!outputText) { alert("まずは整形を実行してください。整形結果から候補を抽出します。"); return; }
         
-        // 3文字以上のカタカナ語を抽出
-        const matches = input.match(/[ァ-ヶー]{3,}/g) || [];
+        const matches = outputText.match(/[ァ-ヶー]{3,}/g) || [];
         const unique = Array.from(new Set(matches)).sort();
         const rules = [];
-        const seen = new Set();
-
         unique.forEach(word => {
             if (word.endsWith('ー')) {
                 const base = word.slice(0, -1);
-                // 「パワー」のように短すぎるものは除外。一般的に「センサ」「サーバ」等の専門用語を狙う
-                if (base.length < 3) return; 
-                const rule = `${word}, ${base} > ${base}`;
-                if (!seen.has(rule)) {
-                    rules.push(rule);
-                    seen.add(rule);
-                }
+                if (base.length < 3) return; // 「パワー」除外
+                rules.push(`${word}, ${base} > ${base}`);
             }
         });
 
@@ -225,15 +215,12 @@
             const listDiv = document.getElementById('assistList');
             listDiv.innerHTML = "";
             rules.forEach((rule, i) => {
-                const div = document.createElement('div');
-                div.className = 'assist-item';
+                const div = document.createElement('div'); div.className = 'assist-item';
                 div.innerHTML = `<input type="checkbox" id="rule_${i}" checked> <label for="rule_${i}">${rule}</label>`;
                 listDiv.appendChild(div);
             });
             panel.style.display = 'block';
-        } else {
-            alert("置換の必要がありそうなカタカナ語は見つかりませんでした。");
-        }
+        } else { alert("新しいカタカナ語は見つかりませんでした。"); }
     }
 
     function applySuggestions() {
@@ -241,13 +228,11 @@
         let added = 0;
         currentSuggestions.forEach((rule, i) => {
             if (document.getElementById(`rule_${i}`).checked) {
-                area.value = area.value + (area.value ? '\n' : '') + rule;
-                added++;
+                area.value = area.value + (area.value ? '\n' : '') + rule; added++;
             }
         });
         document.getElementById('assistPanel').style.display = 'none';
         checkUnsaved('replaceList');
-        if(added > 0) alert(`${added} 件のルールをリストに追加しました。同期ボタンで保存してください。`);
     }
 
     async function syncList(fileName, elementId) {
@@ -268,18 +253,17 @@
                     if(elementId === 'whitelist') masterWhitelist = remote.split('\n');
                 }
                 if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
-                    if (confirm("GitHubに保存（上書き）しますか？")) {
+                    if (confirm("GitHubに保存しますか？")) {
                         const putRes = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                             body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(textArea.value))), sha: data.sha }) });
                         if(putRes.ok) { lastSynced[elementId] = textArea.value; checkUnsaved(elementId); alert("保存完了"); return; }
                     }
                 }
-                textArea.value = remote; lastSynced[elementId] = remote; checkUnsaved(elementId); alert("読込完了");
+                textArea.value = remote; lastSynced[elementId] = remote; checkUnsaved(elementId); alert("読込・ソート完了");
             }
         } catch (e) { alert("同期エラー"); }
     }
 
-    // --- メインエンジン (v25継承) ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
@@ -287,6 +271,11 @@
         const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
 
         text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
+
+        // 【バグ修正】冒頭の全角スペースをマーカーで守る（trim対策）
+        let hasStartSpace = text.startsWith('　');
+        if (hasStartSpace) text = '___START_Z_SPACE___' + text.slice(1);
+
         const protectedItems = [];
         text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => { const p = `___P_URL_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p; });
         text = text.replace(/\d{1,2}:\d{2}/g, (m) => { const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p; });
@@ -355,16 +344,18 @@
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
         text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
         for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
-        const final = text.replace(/\n{3,}/g, '\n\n').trim();
-        if (isCompare) document.getElementById('output').innerHTML = final.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
-        else document.getElementById('output').innerText = final;
-        let zenCount = 0; for (let i = 0; i < final.length; i++) {
-            const c = final.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
-        }
-        document.getElementById('charCount').innerText = `文字数: ${final.length} | 全角換算: ${Math.ceil(zenCount)}`;
-    }
 
-    function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        // マーカーの復元
+        if (hasStartSpace) text = '　' + text.replace(/^___START_Z_SPACE___/, '');
+
+        if (isCompare) document.getElementById('output').innerHTML = text.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
+        else document.getElementById('output').innerText = text;
+        let zenCount = 0; for (let i = 0; i < text.length; i++) {
+            const c = text.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
+        }
+        document.getElementById('charCount').innerText = `文字数: ${text.length} | 全角換算: ${Math.ceil(zenCount)}`;
+    }
 </script>
 </body>
 </html>
