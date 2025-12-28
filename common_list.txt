@@ -1,5 +1,6 @@
 Advanced Driver Assistance Systems
 Advanced Micro Devices
+Analog Devices
 Apple Intelligence
 Applied Materials
 Bob Swan
@@ -38,4 +39,4 @@ Windows 8
 Wingtech Technology
 ルネサス エレクトロニクス
 大山 聡
-Analog Devices
+NXP Semiconductors
