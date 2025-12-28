@@ -38,3 +38,4 @@ Windows 8
 Wingtech Technology
 ルネサス エレクトロニクス
 大山 聡
+Analog Devices
