@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v25</title>
+    <title>テキスト整形くん 校閲Pro v26</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
@@ -29,6 +29,15 @@
         .status-init { background: #e9ecef; color: #6c757d; }
         .status-sync { background: #d4edda; color: #155724; }
         .status-unsaved { background: #fff3cd; color: #856404; border: 1px solid var(--accent-orange); }
+        
+        /* 置換案アシスタントのスタイル */
+        .assist-panel { background: #fff3e0; border: 1px solid #ffe0b2; padding: 15px; border-radius: 6px; margin-top: 5px; display: none; }
+        .assist-title { font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; color: #e67e22; }
+        .assist-list { max-height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; padding: 10px; border-radius: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .assist-item { font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
+        .assist-item input { cursor: pointer; }
+        .assist-buttons { display: flex; gap: 10px; margin-top: 10px; }
+
         .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         button { padding: 12px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; color: white; }
         button:hover { opacity: 0.85; transform: translateY(-1px); }
@@ -51,8 +60,9 @@
         <button onclick="if(confirm('全て消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v25</h1>
+    <h1>テキスト整形くん 校閲Pro v26</h1>
 
+    <!-- 基本設定 -->
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
@@ -62,6 +72,7 @@
         </div>
     </details>
 
+    <!-- リスト管理 -->
     <details id="listDetails">
         <summary>📚 各種リストの同期</summary>
         <div class="details-content list-grid">
@@ -75,6 +86,17 @@
                 <label><span>2. 共通マスタ置換</span><span id="status_replaceList" class="list-status status-init">☁️ 未読込</span></label>
                 <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList')"></textarea>
                 <button class="btn-assist" onclick="suggestRules()">📋 原稿から置換案を抽出</button>
+                
+                <!-- 置換案アシスタントパネル -->
+                <div id="assistPanel" class="assist-panel">
+                    <div class="assist-title">🔍 抽出された置換案（チェックしたものを追加）</div>
+                    <div id="assistList" class="assist-list"></div>
+                    <div class="assist-buttons">
+                        <button onclick="applySuggestions()" style="background:var(--accent-green); font-size:10px; padding:5px;">✅ 選択した案を追加</button>
+                        <button onclick="document.getElementById('assistPanel').style.display='none'" style="background:#999; font-size:10px; padding:5px;">キャンセル</button>
+                    </div>
+                </div>
+
                 <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期（ソート）</button>
             </div>
             <div class="list-box" style="background:#fff3e0">
@@ -85,6 +107,7 @@
         </div>
     </details>
 
+    <!-- 記号オプション -->
     <details>
         <summary>🔡 記号・組版オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
@@ -171,31 +194,60 @@
         else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
     }
 
-    // カタカナ抽出アシスタント（改良版）
+    // --- カタカナ抽出アシスタント v26 ---
+    let currentSuggestions = [];
     function suggestRules() {
         const input = document.getElementById('input').value;
         if(!input) { alert("原文を貼り付けてから実行してください"); return; }
+        
         // 3文字以上のカタカナ語を抽出
         const matches = input.match(/[ァ-ヶー]{3,}/g) || [];
         const unique = Array.from(new Set(matches)).sort();
         const rules = [];
+        const seen = new Set();
+
         unique.forEach(word => {
-            // 末尾が長音のもの、または長音なしのペアを原稿から探す
-            const base = word.endsWith('ー') ? word.slice(0, -1) : word;
-            if (base.length < 2) return; 
-            // 「メール」などの一般的によく使われる単語は除外したいが、今回は単純に「ー」の有無で提案
             if (word.endsWith('ー')) {
-                rules.push(`${word}, ${base} > ${base}`);
+                const base = word.slice(0, -1);
+                // 「パワー」のように短すぎるものは除外。一般的に「センサ」「サーバ」等の専門用語を狙う
+                if (base.length < 3) return; 
+                const rule = `${word}, ${base} > ${base}`;
+                if (!seen.has(rule)) {
+                    rules.push(rule);
+                    seen.add(rule);
+                }
             }
         });
 
         if (rules.length > 0) {
-            if (confirm(rules.length + " 件の置換案を作りました。リストの末尾に追加しますか？\n例: " + rules[0])) {
-                const area = document.getElementById('replaceList');
-                area.value = area.value + (area.value ? '\n' : '') + Array.from(new Set(rules)).join('\n');
-                checkUnsaved('replaceList');
+            currentSuggestions = rules;
+            const panel = document.getElementById('assistPanel');
+            const listDiv = document.getElementById('assistList');
+            listDiv.innerHTML = "";
+            rules.forEach((rule, i) => {
+                const div = document.createElement('div');
+                div.className = 'assist-item';
+                div.innerHTML = `<input type="checkbox" id="rule_${i}" checked> <label for="rule_${i}">${rule}</label>`;
+                listDiv.appendChild(div);
+            });
+            panel.style.display = 'block';
+        } else {
+            alert("置換の必要がありそうなカタカナ語は見つかりませんでした。");
+        }
+    }
+
+    function applySuggestions() {
+        const area = document.getElementById('replaceList');
+        let added = 0;
+        currentSuggestions.forEach((rule, i) => {
+            if (document.getElementById(`rule_${i}`).checked) {
+                area.value = area.value + (area.value ? '\n' : '') + rule;
+                added++;
             }
-        } else { alert("明確な置換候補は見つかりませんでした。"); }
+        });
+        document.getElementById('assistPanel').style.display = 'none';
+        checkUnsaved('replaceList');
+        if(added > 0) alert(`${added} 件のルールをリストに追加しました。同期ボタンで保存してください。`);
     }
 
     async function syncList(fileName, elementId) {
@@ -216,7 +268,7 @@
                     if(elementId === 'whitelist') masterWhitelist = remote.split('\n');
                 }
                 if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
-                    if (confirm("GitHubに保存しますか？")) {
+                    if (confirm("GitHubに保存（上書き）しますか？")) {
                         const putRes = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                             body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(textArea.value))), sha: data.sha }) });
                         if(putRes.ok) { lastSynced[elementId] = textArea.value; checkUnsaved(elementId); alert("保存完了"); return; }
@@ -227,7 +279,7 @@
         } catch (e) { alert("同期エラー"); }
     }
 
-    // --- メインエンジン (v24継承) ---
+    // --- メインエンジン (v25継承) ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
@@ -311,6 +363,7 @@
         }
         document.getElementById('charCount').innerText = `文字数: ${final.length} | 全角換算: ${Math.ceil(zenCount)}`;
     }
+
     function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
 </script>
 </body>
