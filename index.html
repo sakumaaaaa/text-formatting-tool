@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v24</title>
+    <title>テキスト整形くん 校閲Pro v25</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
@@ -18,27 +18,17 @@
         .container { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
         h2 { font-size: 1.1rem; margin: 25px 0 10px 0; font-weight: bold; border-bottom: 2px solid var(--accent-blue); padding-bottom: 5px; display: block; }
-
         textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
         details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
         details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
-
         .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
         .list-box { padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
         .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .list-status { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .status-init { background: #e9ecef; color: #6c757d; }
         .status-sync { background: #d4edda; color: #155724; }
         .status-unsaved { background: #fff3cd; color: #856404; border: 1px solid var(--accent-orange); }
-        
-        .list-search { padding: 6px; border-radius: 4px; border: 2px solid var(--accent-blue); font-size: 0.8rem; width: 100%; box-sizing: border-box; outline: none; }
-        .item-count { font-size: 0.75rem; color: #666; }
-
-        .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
-        .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
-
-        .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border: 1px solid var(--border-color); }
         .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         button { padding: 12px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; color: white; }
         button:hover { opacity: 0.85; transform: translateY(-1px); }
@@ -47,7 +37,6 @@
         .btn-save { background: var(--accent-green); }
         .btn-sync { background: var(--accent-purple); font-size: 11px; padding: 6px; width: 100%; }
         .btn-assist { background: #e67e22; font-size: 11px; padding: 6px; width: 100%; }
-
         #output { background: var(--container-bg); padding: 20px; border: 2px solid var(--border-color); border-radius: 8px; white-space: pre-wrap; min-height: 250px; font-size: 15px; line-height: 1.6; }
         .diff-tag { color: #d63384; font-weight: bold; background: #fff0f6; border-radius: 3px; padding: 0 2px; }
         body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
@@ -62,9 +51,8 @@
         <button onclick="if(confirm('全て消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v24</h1>
+    <h1>テキスト整形くん 校閲Pro v25</h1>
 
-    <!-- 基本設定 -->
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
@@ -74,44 +62,29 @@
         </div>
     </details>
 
-    <!-- リスト管理 -->
     <details id="listDetails">
-        <summary>📚 除外・置換・スタイル定義の同期</summary>
+        <summary>📚 各種リストの同期</summary>
         <div class="details-content list-grid">
-            <!-- 1. 除外リスト -->
             <div class="list-box" style="background:var(--list-bg)">
-                <label>
-                    <span>1. 除外リスト (保護語)</span>
-                    <span id="status_whitelist" class="list-status status-sync">✅ 最新</span>
-                </label>
-                <input type="text" id="search_whitelist" class="list-search" placeholder="単語を検索..." oninput="filterList()">
-                <textarea id="whitelist" style="height: 120px;" oninput="onListInput()" placeholder="1行に1単語"></textarea>
-                <div class="item-count" id="count_whitelist">0 単語</div>
+                <label><span>1. 除外リスト</span><span id="status_whitelist" class="list-status status-init">☁️ 未読込</span></label>
+                <input type="text" id="search_whitelist" style="padding:4px; font-size:0.8rem;" placeholder="単語を検索..." oninput="filterList()">
+                <textarea id="whitelist" style="height: 120px;" oninput="onListInput()"></textarea>
                 <button class="btn-sync" onclick="syncList('common_list.txt', 'whitelist')">☁️ 同期（A-Zソート）</button>
             </div>
-            <!-- 2. 置換リスト -->
             <div class="list-box" style="background:var(--replace-bg)">
-                <label>
-                    <span>2. 共通マスタ置換</span>
-                    <span id="status_replaceList" class="list-status status-sync">✅ 最新</span>
-                </label>
-                <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList')" placeholder="ウェハ, ウェハー > ウエハ"></textarea>
+                <label><span>2. 共通マスタ置換</span><span id="status_replaceList" class="list-status status-init">☁️ 未読込</span></label>
+                <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList')"></textarea>
                 <button class="btn-assist" onclick="suggestRules()">📋 原稿から置換案を抽出</button>
-                <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期（ソート実行）</button>
+                <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期（ソート）</button>
             </div>
-            <!-- 3. スタイル定義 -->
             <div class="list-box" style="background:#fff3e0">
-                <label>
-                    <span>3. スタイル定義 (JSON)</span>
-                    <span id="status_presetsJson" class="list-status status-sync">✅ 最新</span>
-                </label>
+                <label><span>3. スタイル定義 (JSON)</span><span id="status_presetsJson" class="list-status status-init">☁️ 未読込</span></label>
                 <textarea id="presetsJson" style="height: 184px;" oninput="checkUnsaved('presetsJson')"></textarea>
                 <button class="btn-sync" onclick="syncList('presets.json', 'presetsJson')">☁️ 同期</button>
             </div>
         </div>
     </details>
 
-    <!-- 記号オプション -->
     <details>
         <summary>🔡 記号・組版オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
@@ -131,7 +104,7 @@
     </details>
 
     <div class="controls">
-        <div>校閲スタイル: <select id="activeStyle" class="style-select"><option value="none">なし (整形のみ)</option><option value="汎用（英名）">汎用（英名）</option><option value="汎用（和名）">汎用（和名）</option><option value="サイエンス">サイエンス</option><option value="大山レポート">大山レポート</option></select></div>
+        <div>スタイル: <select id="activeStyle" class="style-select"><option value="none">なし (整形のみ)</option><option value="汎用（英名）">汎用（英名）</option><option value="汎用（和名）">汎用（和名）</option><option value="サイエンス">サイエンス</option><option value="大山レポート">大山レポート</option></select></div>
         <label class="compare-mode"><input type="checkbox" id="compareMode" checked> 比較・注釈モード</label>
     </div>
 
@@ -151,8 +124,7 @@
 
 <script>
     const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_comma','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
-    let lastSynced = {}; 
-    let masterWhitelist = []; 
+    let lastSynced = {}; let masterWhitelist = []; 
 
     window.onload = function() {
         document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
@@ -181,74 +153,49 @@
 
     function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
 
-    function onListInput() {
-        const query = document.getElementById('search_whitelist').value.toLowerCase();
-        if (query === "") masterWhitelist = document.getElementById('whitelist').value.split('\n');
-        checkUnsaved('whitelist');
-    }
-
     function checkUnsaved(id) {
         const current = document.getElementById(id).value.trim();
         const last = (lastSynced[id] || "").trim();
         const status = document.getElementById('status_' + id);
-        if (current !== last) {
-            status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved";
-        } else {
-            status.innerText = "✅ 最新"; status.className = "list-status status-sync";
-        }
-        if (id === 'whitelist') updateCount();
+        if (last === "") { status.innerText = "☁️ 未読込"; status.className = "list-status status-init"; }
+        else if (current !== last) { status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; }
+        else { status.innerText = "✅ 最新"; status.className = "list-status status-sync"; }
     }
 
-    function updateCount() {
-        const val = document.getElementById('whitelist').value;
-        const count = val.split('\n').filter(s => s.trim() !== "").length;
-        document.getElementById('count_whitelist').innerText = `${count} 単語`;
-    }
+    function onListInput() { checkUnsaved('whitelist'); masterWhitelist = document.getElementById('whitelist').value.split('\n'); }
 
     function filterList() {
         const query = document.getElementById('search_whitelist').value.toLowerCase();
         const textArea = document.getElementById('whitelist');
-        if (query === "") {
-            textArea.value = masterWhitelist.join('\n'); textArea.readOnly = false; textArea.style.opacity = "1";
-        } else {
-            const filtered = masterWhitelist.filter(line => line.toLowerCase().includes(query));
-            textArea.value = filtered.join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7";
-        }
+        if (query === "") { textArea.value = masterWhitelist.join('\n'); textArea.readOnly = false; textArea.style.opacity = "1"; }
+        else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
     }
 
-    // カタカナ抽出アシスタント
+    // カタカナ抽出アシスタント（改良版）
     function suggestRules() {
         const input = document.getElementById('input').value;
         if(!input) { alert("原文を貼り付けてから実行してください"); return; }
-        const matches = input.match(/[ァ-ヶー]{2,}/g) || [];
+        // 3文字以上のカタカナ語を抽出
+        const matches = input.match(/[ァ-ヶー]{3,}/g) || [];
         const unique = Array.from(new Set(matches)).sort();
         const rules = [];
-        const processed = new Set();
-        
         unique.forEach(word => {
+            // 末尾が長音のもの、または長音なしのペアを原稿から探す
             const base = word.endsWith('ー') ? word.slice(0, -1) : word;
-            if (processed.has(base)) return;
-            processed.add(base);
-            // 大山レポート優先：長音なしを正解案とする
-            rules.push(`${base}ー, ${base} > ${base}`);
+            if (base.length < 2) return; 
+            // 「メール」などの一般的によく使われる単語は除外したいが、今回は単純に「ー」の有無で提案
+            if (word.endsWith('ー')) {
+                rules.push(`${word}, ${base} > ${base}`);
+            }
         });
 
         if (rules.length > 0) {
-            const confirmMsg = "以下のカタカナ語を抽出しました。置換リストの末尾に追加しますか？\n\n" + rules.slice(0, 5).join('\n') + "\n...計 " + rules.length + " 件";
-            if (confirm(confirmMsg)) {
-                const current = document.getElementById('replaceList').value;
-                document.getElementById('replaceList').value = current + (current ? '\n' : '') + rules.join('\n');
+            if (confirm(rules.length + " 件の置換案を作りました。リストの末尾に追加しますか？\n例: " + rules[0])) {
+                const area = document.getElementById('replaceList');
+                area.value = area.value + (area.value ? '\n' : '') + Array.from(new Set(rules)).join('\n');
                 checkUnsaved('replaceList');
-                alert("追加しました。必要に応じて重複や正解を調整してください。");
             }
-        } else {
-            alert("カタカナ語が見つかりませんでした。");
-        }
-    }
-
-    function cleanAndSort(text) {
-        let lines = (text.includes(',') && !text.includes('\n')) ? text.split(',').map(s => s.trim()) : text.split('\n').map(s => s.trim());
-        return Array.from(new Set(lines)).filter(s => s !== "").sort((a, b) => a.localeCompare(b, 'ja', {sensitivity: 'base'}));
+        } else { alert("明確な置換候補は見つかりませんでした。"); }
     }
 
     async function syncList(fileName, elementId) {
@@ -262,60 +209,36 @@
             const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
             if (res.ok) {
                 const data = await res.json();
-                let remoteRaw = decodeURIComponent(escape(atob(data.content)));
-                let processedContent = remoteRaw;
-                // 強制ソート (除外リスト、置換リスト共に適用)
+                let remote = decodeURIComponent(escape(atob(data.content)));
                 if (elementId === 'whitelist' || elementId === 'replaceList') {
-                    const sorted = cleanAndSort(remoteRaw);
-                    processedContent = sorted.join('\n');
-                    if(elementId === 'whitelist') masterWhitelist = sorted;
+                    const lines = (remote.includes(',') && !remote.includes('\n')) ? remote.split(',').map(s=>s.trim()) : remote.split('\n').map(s=>s.trim());
+                    remote = Array.from(new Set(lines)).filter(s=>s!=="").sort((a,b)=>a.localeCompare(b,'ja')).join('\n');
+                    if(elementId === 'whitelist') masterWhitelist = remote.split('\n');
                 }
-
-                if (textArea.value.trim() !== "" && textArea.value.trim() !== processedContent.trim()) {
-                    if (confirm(`${fileName} を保存(ソート実行)しますか？`)) {
-                        let finalToSave = textArea.value;
-                        if (elementId === 'whitelist' || elementId === 'replaceList') {
-                            const sorted = cleanAndSort(textArea.value);
-                            finalToSave = sorted.join('\n');
-                            if(elementId === 'whitelist') masterWhitelist = sorted;
-                        }
-                        const putRes = await fetch(url, {
-                            method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-                            body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha })
-                        });
-                        if(putRes.ok) {
-                            textArea.value = finalToSave; lastSynced[elementId] = finalToSave;
-                            checkUnsaved(elementId); alert("保存完了"); return;
-                        }
+                if (textArea.value.trim() !== "" && textArea.value.trim() !== remote.trim()) {
+                    if (confirm("GitHubに保存しますか？")) {
+                        const putRes = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                            body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(textArea.value))), sha: data.sha }) });
+                        if(putRes.ok) { lastSynced[elementId] = textArea.value; checkUnsaved(elementId); alert("保存完了"); return; }
                     }
                 }
-                textArea.value = processedContent; lastSynced[elementId] = processedContent;
-                checkUnsaved(elementId); alert("読込＆ソート完了");
+                textArea.value = remote; lastSynced[elementId] = remote; checkUnsaved(elementId); alert("読込完了");
             }
-        } catch (e) { alert("エラー: " + e.message); }
+        } catch (e) { alert("同期エラー"); }
     }
 
-    // --- メインエンジン v24 ---
+    // --- メインエンジン (v24継承) ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
         const activeStyle = document.getElementById('activeStyle').value;
         const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
 
-        text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ');
-        text = text.replace(/[ 　]+\n/g, '\n');
-
+        text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
         const protectedItems = [];
-        text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => {
-            const p = `___P_URL_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
-        });
-        text = text.replace(/\d{1,2}:\d{2}/g, (m) => {
-            const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
-        });
-
-        // 改良：文頭(^)の全角スペースも保護対象に
-        text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
-        text = text.replace(/\n\n+/g, '___P_DPARA___');
+        text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => { const p = `___P_URL_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p; });
+        text = text.replace(/\d{1,2}:\d{2}/g, (m) => { const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p; });
+        text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___').replace(/\n\n+/g, '___P_DPARA___');
 
         const whitelist = document.getElementById('whitelist').value.split('\n').map(s => s.trim()).filter(s => s !== "");
         whitelist.forEach((word, i) => {
@@ -333,51 +256,35 @@
             });
         });
 
-        const replaceWithDiff = (regex, target) => {
-            text = text.replace(regex, (m) => (m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target));
-        };
+        const replaceWithDiff = (regex, target) => { text = text.replace(regex, (m) => (m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); };
         replaceWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
         replaceWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
         replaceWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
         replaceWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
         replaceWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
-        const tOpen = config.opt_bracket === 'zen' ? '（' : '(';
-        const tClose = config.opt_bracket === 'zen' ? '）' : ')';
-        text = text.replace(/[\(\)（）]/g, (m) => {
-            const t = (m === '(' || m === '（') ? tOpen : tClose;
-            return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
-        });
-        if (config.opt_comma === 'comma') replaceWithDiff(/、/g, '，');
-        else replaceWithDiff(/，/g, '、');
+        const tOpen = config.opt_bracket === 'zen' ? '（' : '('; const tClose = config.opt_bracket === 'zen' ? '）' : ')';
+        text = text.replace(/[\(\)（）]/g, (m) => { const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t); });
+        if (config.opt_comma === 'comma') replaceWithDiff(/、/g, '，'); else replaceWithDiff(/，/g, '、');
         if (config.opt_mark_space !== 'keep') {
             const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
             text = text.replace(/([！？])([ 　]*)([^\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
                 if (space === markSpaceChar) return match;
-                const target = m1 + markSpaceChar + nextChar;
-                return isCompare ? `${match}【>${target}】` : target;
+                const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
             });
         }
         text = text.replace(/．/g, isCompare ? '．【>.】' : '.').replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
-        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => {
-            const han = String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-            return isCompare ? `${s}【>${han}】` : han;
-        });
-
+        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => { const han = String.fromCharCode(s.charCodeAt(0) - 0xFEE0); return isCompare ? `${s}【>${han}】` : han; });
         text = text.replace(/\n/g, '');
 
-        // 校閲ロジック
         if (activeStyle !== 'none') {
             let finalRules = [];
             document.getElementById('replaceList').value.split('\n').forEach(line => {
-                const parts = line.split('>');
-                if (parts.length === 2) parts[0].split(',').forEach(c => finalRules.push({ from: c.trim(), to: parts[1].trim() }));
+                const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => finalRules.push({ from: c.trim(), to: parts[1].trim() }));
             });
             try {
                 const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
                 const styleData = presets[activeStyle] || {};
-                for (let key in styleData) key.split(',').forEach(c => {
-                    finalRules = finalRules.filter(r => r.from !== c.trim()); finalRules.push({ from: c.trim(), to: styleData[key] });
-                });
+                for (let key in styleData) key.split(',').forEach(c => { finalRules = finalRules.filter(r => r.from !== c.trim()); finalRules.push({ from: c.trim(), to: styleData[key] }); });
             } catch(e) {}
             finalRules.sort((a, b) => b.from.length - a.from.length);
             const occurrenceMap = new Map();
@@ -392,25 +299,18 @@
                 });
             });
         }
-
         let prev; do { prev = text; text = text.replace(/([a-zA-Z0-9.]) +([a-zA-Z0-9.])/g, (m, p1, p2) => (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2); } while (prev !== text);
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
-        
-        // 保護解除
         text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
         for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
-
         const final = text.replace(/\n{3,}/g, '\n\n').trim();
         if (isCompare) document.getElementById('output').innerHTML = final.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
         else document.getElementById('output').innerText = final;
-
         let zenCount = 0; for (let i = 0; i < final.length; i++) {
-            const c = final.charCodeAt(i);
-            if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
+            const c = final.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
         }
         document.getElementById('charCount').innerText = `文字数: ${final.length} | 全角換算: ${Math.ceil(zenCount)}`;
     }
-
     function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
 </script>
 </body>
