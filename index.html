@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro</title>
+    <title>テキスト整形くん 校閲Pro (v30 Guardian)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="light-mode">
@@ -13,7 +13,7 @@
         <button id="clearBtn">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro</h1>
+    <h1>テキスト整形くん 校閲Pro <span style="font-size:0.6em; color:var(--accent-blue); vertical-align:middle;">v30 Plan-A</span></h1>
 
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
@@ -24,18 +24,28 @@
         </div>
     </details>
 
-    <details id="listDetails">
+    <details id="listDetails" open>
         <summary>📚 各種リストの同期・管理</summary>
         <div class="details-content list-grid">
+            <!-- 1. Whitelist -->
             <div class="list-box" style="background:var(--list-bg)">
                 <label><span>1. 保護リスト (維持)</span><span id="status_whitelist" class="list-status status-init">☁️ 未読込</span></label>
                 <input type="text" id="search_whitelist" style="padding:4px; font-size:0.8rem;" placeholder="保護語を検索..." oninput="filterList()">
-                <textarea id="whitelist" style="height: 120px;" oninput="onListInput()"></textarea>
+                <textarea id="whitelist" style="height: 120px;" oninput="onListInput('whitelist')"></textarea>
                 <button class="btn-sync" onclick="syncList('common_list.txt', 'whitelist')">☁️ 同期</button>
             </div>
+            
+            <!-- 4. Company Master (New!) -->
+            <div class="list-box" style="background:#e3f2fd; border-color:#90caf9;">
+                <label><span>4. 固有名称マスタ (Shield)</span><span id="status_companyList" class="list-status status-init">☁️ 未読込</span></label>
+                <textarea id="companyList" style="height: 145px;" oninput="onListInput('companyList')" placeholder="企業名・ブランド名を登録（保護優先）"></textarea>
+                <button class="btn-sync" onclick="syncList('company_list.txt', 'companyList')">☁️ 同期</button>
+            </div>
+
+            <!-- 2. Replace Master -->
             <div class="list-box" style="background:var(--replace-bg)">
                 <label><span>2. 共通マスタ置換</span><span id="status_replaceList" class="list-status status-init">☁️ 未読込</span></label>
-                <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList')"></textarea>
+                <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList'); checkConflicts();"></textarea>
                 <button class="btn-assist" onclick="suggestRules()">📋 整形結果から置換案を抽出</button>
                 <div id="assistPanel" style="display:none; background:rgba(0,0,0,0.05); padding:10px; border-radius:4px; font-size:0.8rem;">
                     <div id="assistList" style="max-height:100px; overflow-y:auto; margin-bottom:5px;"></div>
@@ -43,34 +53,54 @@
                 </div>
                 <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期</button>
             </div>
+
+            <!-- 3. Presets (Extended) -->
             <div class="list-box" style="background:var(--presets-bg)">
-                <label><span>3. スタイル定義 (Text)</span><span id="status_presetsJson" class="list-status status-init">☁️ 未読込</span></label>
-                <textarea id="presetsJson" style="height: 120px;" oninput="checkUnsaved('presetsJson')"></textarea>
+                <label><span>3. スタイル定義 (Rules)</span><span id="status_presetsJson" class="list-status status-init">☁️ 未読込</span></label>
+                <textarea id="presetsJson" style="height: 145px;" oninput="checkUnsaved('presetsJson')"></textarea>
                 <button class="btn-sync" onclick="syncList('presets.json', 'presetsJson')">☁️ 同期</button>
             </div>
+        </div>
+        <div id="conflictAlert" style="display:none; background:#fff3cd; color:#856404; padding:8px; margin-top:10px; border-radius:4px; font-size:0.85rem; border:1px solid #ffeeba;">
+            ⚠️ 警告: リスト間で競合が発生しています。固有名称マスタ(4)が優先されます。
         </div>
     </details>
 
     <details>
         <summary>🔡 記号・組版オプション</summary>
-        <div class="details-content options-grid" id="optionsGrid">
-            <div class="opt-item"><span>％ パーセント</span><select id="opt_percent"><option value="zen">全角 ％</option><option value="han">半角 %</option></select></div>
-            <div class="opt-item"><span>＆ アンパサンド</span><select id="opt_ampersand"><option value="zen">全角 ＆</option><option value="han">半角 &</option></select></div>
-            <div class="opt-item"><span>（ ）カッコ</span><select id="opt_bracket"><option value="zen">全角 （ ）</option><option value="han">半角 ( )</option></select></div>
-            <div class="opt-item"><span>： コロン</span><select id="opt_colon"><option value="zen">全角 ：</option><option value="han">半角 :</option></select></div>
-            <div class="opt-item"><span>読点</span><select id="opt_comma"><option value="ten">テン 、</option><option value="comma">カンマ ，</option></select></div>
-            <div class="opt-item"><span>引用符</span><select id="opt_quote"><option value="zen">全角 “”</option><option value="han">半角 ""</option></select></div>
-            <div class="opt-item"><span>― ダーシ</span><select id="opt_dash"><option value="zen">全角 ―</option><option value="han">半角 -</option></select></div>
-            <div class="opt-item"><span>- ハイフン</span><select id="opt_hyphen"><option value="han">半角 -</option><option value="zen">全角 －</option></select></div>
-            <div class="opt-item"><span>／ スラッシュ</span><select id="opt_slash"><option value="han">半角 /</option><option value="zen">全角 ／</option></select></div>
-            <div class="opt-item"><span>＝ 等号</span><select id="opt_equal"><option value="han">半角 =</option><option value="zen">全角 ＝</option></select></div>
-            <div class="opt-item"><span>感嘆疑問 ！ ？</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
-            <div class="opt-item"><span>！ ？ 後の空き</span><select id="opt_mark_space"><option value="keep">維持</option><option value="force">全角アキ強制</option><option value="none">詰める</option></select></div>
+        <div class="details-content">
+            <div class="options-grid" id="optionsGrid">
+                <div class="opt-item"><span>％ パーセント</span><select id="opt_percent"><option value="zen">全角 ％</option><option value="han">半角 %</option></select></div>
+                <div class="opt-item"><span>＆ アンパサンド</span><select id="opt_ampersand"><option value="zen">全角 ＆</option><option value="han">半角 &</option></select></div>
+                <div class="opt-item"><span>（ ）カッコ</span><select id="opt_bracket"><option value="zen">全角 （ ）</option><option value="han">半角 ( )</option></select></div>
+                <div class="opt-item"><span>： コロン</span><select id="opt_colon"><option value="zen">全角 ：</option><option value="han">半角 :</option></select></div>
+                <div class="opt-item"><span>読点</span><select id="opt_comma"><option value="ten">テン 、</option><option value="comma">カンマ ，</option></select></div>
+                <div class="opt-item"><span>引用符</span><select id="opt_quote"><option value="zen">全角 “”</option><option value="han">半角 ""</option></select></div>
+                <div class="opt-item"><span>― ダーシ</span><select id="opt_dash"><option value="zen">全角 ―</option><option value="han">半角 -</option></select></div>
+                <div class="opt-item"><span>- ハイフン</span><select id="opt_hyphen"><option value="han">半角 -</option><option value="zen">全角 －</option></select></div>
+                <div class="opt-item"><span>／ スラッシュ</span><select id="opt_slash"><option value="han">半角 /</option><option value="zen">全角 ／</option></select></div>
+                <div class="opt-item"><span>＝ 等号</span><select id="opt_equal"><option value="han">半角 =</option><option value="zen">全角 ＝</option></select></div>
+                <div class="opt-item"><span>感嘆疑問 ！ ？</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
+                <div class="opt-item"><span>！ ？ 後の空き</span><select id="opt_mark_space"><option value="keep">維持</option><option value="force">全角アキ強制</option><option value="none">詰める</option></select></div>
+            </div>
+            <!-- Style Save UI -->
+            <div style="margin-top:15px; padding-top:10px; border-top:1px dashed var(--border-color); display:flex; align-items:center; gap:10px; justify-content:flex-end;">
+                <span style="font-size:0.8rem; font-weight:bold; color:var(--accent-purple);">現在の設定（ルール＋オプション）を保存:</span>
+                <input type="text" id="newStyleName" placeholder="新しいスタイル名" style="padding:4px; font-size:0.8rem; width:150px;">
+                <button onclick="saveCurrentStyleAsNew()" style="background:var(--accent-purple); padding:5px 10px; font-size:0.8rem;">💾 スタイル追加</button>
+            </div>
         </div>
     </details>
 
     <div class="controls">
-        <div>スタイル: <select id="activeStyle" class="style-select"><option value="none">なし (整形のみ)</option><option value="汎用（英名）">汎用（英名）</option><option value="汎用（和名）">汎用（和名）</option><option value="サイエンス">サイエンス</option><option value="大山レポート">大山レポート</option></select></div>
+        <div style="flex-grow:1;">
+            <label style="font-weight:bold; font-size:0.9rem;">適用スタイル:</label>
+            <select id="activeStyle" class="style-select" onchange="applyStyle(this.value)">
+                <option value="none">なし (整形のみ)</option>
+                <!-- Options will be populated dynamically -->
+            </select>
+            <span id="styleInfo" style="font-size:0.8rem; color:#666; margin-left:10px;"></span>
+        </div>
         <label class="compare-mode"><input type="checkbox" id="compareMode" checked> 比較・注釈モード</label>
     </div>
 
