@@ -8,7 +8,7 @@ body.dark-mode {
     --accent-blue: #4599ff; --config-bg: #2c2d2e; 
     --list-bg: #1a2a3a; --opt-bg: #252627; --replace-bg: #1a301a; --presets-bg: #2d251d;
 }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.5; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 1200px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.5; }
 .container { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
 h2 { font-size: 1.1rem; margin: 25px 0 10px 0; font-weight: bold; border-bottom: 2px solid var(--accent-blue); padding-bottom: 5px; display: block; }
@@ -16,7 +16,8 @@ textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--bo
 details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
 details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
 .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
-.list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
+/* Adjusted for 4 columns */
+.list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
 .list-box { padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
 .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
 .list-status { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
