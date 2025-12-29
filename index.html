@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro v28</title>
+    <title>テキスト整形くん 校閲Pro v29</title>
     <style>
         :root {
             --bg-color: #f0f2f5; --container-bg: #ffffff; --text-color: #1c1e21; --border-color: #dddfe2;
@@ -12,18 +12,18 @@
         }
         body.dark-mode {
             --bg-color: #18191a; --container-bg: #242526; --text-color: #e4e6eb; --border-color: #3e4042;
-            --accent-blue: #4599ff; --config-bg: #3a3b3c; --list-bg: #1c2d3d; --opt-bg: #303031; --replace-bg: #1d331d; --presets-bg: #3a2e22;
+            --accent-blue: #4599ff; --config-bg: #2c2d2e; 
+            /* ダークモード時のボックス：彩度を落とした落ち着いた色 */
+            --list-bg: #1a2a3a; --opt-bg: #252627; --replace-bg: #1a301a; --presets-bg: #2d251d;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 20px; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; line-height: 1.5; }
         .container { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
         h2 { font-size: 1.1rem; margin: 25px 0 10px 0; font-weight: bold; border-bottom: 2px solid var(--accent-blue); padding-bottom: 5px; display: block; }
-
         textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; font-size: 14px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
         details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
         details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
-
         .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
         .list-box { padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
         .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
@@ -31,11 +31,9 @@
         .status-init { background: #e9ecef; color: #6c757d; }
         .status-sync { background: #d4edda; color: #155724; }
         .status-unsaved { background: #fff3cd; color: #856404; border: 1px solid var(--accent-orange); }
-
         .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
         .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
-
         .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border: 1px solid var(--border-color); }
         .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         button { padding: 12px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; color: white; }
@@ -45,7 +43,6 @@
         .btn-save { background: var(--accent-green); }
         .btn-sync { background: var(--accent-purple); font-size: 11px; padding: 6px; width: 100%; }
         .btn-assist { background: #e67e22; font-size: 11px; padding: 6px; width: 100%; }
-
         #output { background: var(--container-bg); padding: 20px; border: 2px solid var(--border-color); border-radius: 8px; white-space: pre-wrap; min-height: 250px; font-size: 15px; line-height: 1.6; }
         .diff-tag { color: #d63384; font-weight: bold; background: #fff0f6; border-radius: 3px; padding: 0 2px; }
         body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
@@ -56,13 +53,12 @@
 
 <div class="container">
     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px;">
-        <button onclick="toggleDarkMode()" id="modeBtn" style="background:#666; font-size:11px; padding:5px 10px; color:white; border-radius:4px; cursor:pointer; border:none;">🌙 ダークモード</button>
+        <button onclick="toggleDarkMode()" id="modeBtn" style="background:#666; font-size:11px; padding:5px 10px; color:white; border-radius:4px; border:none; cursor:pointer;">🌙 ダークモード</button>
         <button onclick="if(confirm('全て消去しますか？')){document.getElementById('input').value='';document.getElementById('output').innerText='';}" style="background:var(--accent-red); font-size:11px; padding:5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro v28</h1>
+    <h1>テキスト整形くん 校閲Pro v29</h1>
 
-    <!-- 基本設定 -->
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
@@ -72,7 +68,6 @@
         </div>
     </details>
 
-    <!-- リスト管理 -->
     <details id="listDetails">
         <summary>📚 各種リストの同期・管理</summary>
         <div class="details-content list-grid">
@@ -86,13 +81,9 @@
                 <label><span>2. 共通マスタ置換</span><span id="status_replaceList" class="list-status status-init">☁️ 未読込</span></label>
                 <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList')" placeholder="A, B > C"></textarea>
                 <button class="btn-assist" onclick="suggestRules()">📋 整形結果から置換案を抽出</button>
-                <div id="assistPanel" class="assist-panel">
-                    <div class="assist-title">🔍 置換案（チェックしたものを追加）</div>
-                    <div id="assistList" class="assist-list"></div>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button onclick="applySuggestions()" style="background:var(--accent-green); font-size:10px; padding:5px;">✅ 追加</button>
-                        <button onclick="document.getElementById('assistPanel').style.display='none'" style="background:#999; font-size:10px; padding:5px;">閉じる</button>
-                    </div>
+                <div id="assistPanel" style="display:none; background:rgba(0,0,0,0.05); padding:10px; border-radius:4px; font-size:0.8rem;">
+                    <div id="assistList" style="max-height:100px; overflow-y:auto; margin-bottom:5px;"></div>
+                    <button onclick="applySuggestions()" style="background:var(--accent-green); padding:4px 8px; font-size:10px;">✅ 追加</button>
                 </div>
                 <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期（ソート）</button>
             </div>
@@ -104,7 +95,6 @@
         </div>
     </details>
 
-    <!-- 記号オプション -->
     <details>
         <summary>🔡 記号・組版オプション</summary>
         <div class="details-content options-grid" id="optionsGrid">
@@ -118,7 +108,8 @@
             <div class="opt-item"><span>- ハイフン</span><select id="opt_hyphen"><option value="han">半角 -</option><option value="zen">全角 －</option></select></div>
             <div class="opt-item"><span>／ スラッシュ</span><select id="opt_slash"><option value="han">半角 /</option><option value="zen">全角 ／</option></select></div>
             <div class="opt-item"><span>＝ 等号</span><select id="opt_equal"><option value="han">半角 =</option><option value="zen">全角 ＝</option></select></div>
-            <div class="opt-item"><span>！ ？ 感嘆疑問</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
+            <!-- ！ ？ 関連を最後に配置 -->
+            <div class="opt-item"><span>感嘆疑問 ！ ？</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
             <div class="opt-item"><span>！ ？ 後の空き</span><select id="opt_mark_space"><option value="keep">維持</option><option value="force">全角アキ強制</option><option value="none">詰める</option></select></div>
         </div>
     </details>
@@ -172,25 +163,20 @@
     }
 
     function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
-
     function checkUnsaved(id) {
-        const current = document.getElementById(id).value.trim();
-        const last = (lastSynced[id] || "").trim();
+        const current = document.getElementById(id).value.trim(); const last = (lastSynced[id] || "").trim();
         const status = document.getElementById('status_' + id);
         if (last === "") { status.innerText = "☁️ 未読込"; status.className = "list-status status-init"; }
         else if (current !== last) { status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; }
         else { status.innerText = "✅ 最新"; status.className = "list-status status-sync"; }
     }
-
     function onListInput() { checkUnsaved('whitelist'); masterWhitelist = document.getElementById('whitelist').value.split('\n'); }
-
     function filterList() {
         const query = document.getElementById('search_whitelist').value.toLowerCase();
         const textArea = document.getElementById('whitelist');
         if (query === "") { textArea.value = masterWhitelist.join('\n'); textArea.readOnly = false; textArea.style.opacity = "1"; }
         else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
     }
-
     function suggestRules() {
         const out = document.getElementById('output').innerText; if(!out) return;
         const matches = out.match(/[ァ-ヶー]{3,}/g) || [];
@@ -207,7 +193,6 @@
             panel.style.display = 'block';
         }
     }
-
     function applySuggestions() {
         const area = document.getElementById('replaceList');
         currentSuggestions.forEach((rule, i) => { if (document.getElementById(`rule_${i}`).checked) area.value += (area.value ? '\n' : '') + rule; });
@@ -237,22 +222,21 @@
                         if(putRes.ok) { lastSynced[elementId] = textArea.value; checkUnsaved(elementId); alert("保存完了"); return; }
                     }
                 }
-                textArea.value = remote; lastSynced[elementId] = remote; checkUnsaved(elementId); alert("読込完了");
+                textArea.value = remote; lastSynced[elementId] = remote; checkUnsaved(elementId); alert("読込・ソート完了");
             }
         } catch (e) { alert("同期エラー"); }
     }
 
-    // --- メインエンジン v28 ---
+    // --- メインエンジン v29 ---
     function processText() {
         let text = document.getElementById('input').value;
         const isCompare = document.getElementById('compareMode').checked;
         const activeStyle = document.getElementById('activeStyle').value;
         const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
 
-        // 0. 初期正規化
         text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
 
-        // 【バグ修正】冒頭の全角スペースをマーカーで守る
+        // 冒頭の全角スペース保護
         let hasStartSpace = text.startsWith('　');
         if (hasStartSpace) text = '___S_Z_SP___' + text.slice(1);
 
@@ -265,9 +249,10 @@
             const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p;
         });
         // 段落保護
-        text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___').replace(/\n\n+/g, '___P_DPARA___');
+        text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
+        text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-        // 1. 保護リスト (1. 保護リスト)
+        // 1. 保護リスト（表記を維持）➔ カプセル化して二重置換から守る
         const whitelist = document.getElementById('whitelist').value.split('\n').map(s => s.trim()).filter(s => s !== "");
         whitelist.forEach((word, i) => {
             const noSpaceWord = word.replace(/\s+/g, '');
@@ -281,60 +266,83 @@
             });
         });
 
-        // 2. 基本掃除（改行削除）
+        // 2. 基本掃除（改行・スペース詰め）
         text = text.replace(/\n/g, '');
-
-        // 3. 英数字1文字結合 ＆ 日本語周辺スペース削除（※置換より「前」に実行！）
         let prev; do { prev = text; text = text.replace(/([a-zA-Z0-9.]) +([a-zA-Z0-9.])/g, (m, p1, p2) => (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2); } while (prev !== text);
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
 
-        // 4. 校閲置換 (Symbols, Master, Style)
-        const replaceWithDiff = (regex, target) => {
-            text = text.replace(regex, (m) => (m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target));
+        // 3. 【新ロジック】校閲・マスタ置換の実行（カプセル化して二重置換を防止）
+        let allRules = [];
+        // 共通マスタ
+        document.getElementById('replaceList').value.split('\n').forEach(line => {
+            const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
+        });
+        // スタイル別
+        if (activeStyle !== 'none') {
+            try {
+                const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
+                const styleData = presets[activeStyle] || {};
+                for (let key in styleData) key.split(',').forEach(c => {
+                    allRules = allRules.filter(r => r.from !== c.trim()); // 共通マスタをスタイルで上書き
+                    allRules.push({ from: c.trim(), to: styleData[key] });
+                });
+            } catch(e) {}
+        }
+        allRules.sort((a, b) => b.from.length - a.from.length);
+
+        const occurrenceMap = new Map();
+        allRules.forEach((rule, idx) => {
+            if (!rule.from) return;
+            // 国名プレフィックスのリセット（台、豪、米、独など）
+            const regex = new RegExp(`[台豪米独仏日英韓中]*${rule.from.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'g');
+            text = text.replace(regex, (match) => {
+                if (match.includes('___P_')) return match; // すでに置換済み（カプセル内）ならスキップ
+
+                const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
+                let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
+                
+                if (match === targetTo) return match;
+                const result = isCompare ? `${match}【>${targetTo}】` : targetTo;
+                
+                // 【重要】置換した場所をすぐにカプセル化して、後のルールに触らせない
+                const p = `___P_RV_${idx}_${Math.random().toString(36).slice(-2)}___`;
+                protectedItems.push({p, val: result});
+                return p;
+            });
+        });
+
+        // 4. 記号オプション反映
+        const replaceSymWithDiff = (regex, target) => {
+            text = text.replace(regex, (m) => {
+                if (m.includes('___P_')) return m;
+                return (m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target);
+            });
         };
-        replaceWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
-        replaceWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
-        replaceWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
-        replaceWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
-        replaceWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
+        replaceSymWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
+        replaceSymWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
+        replaceSymWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
+        replaceSymWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
+        replaceSymWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
         const tOpen = config.opt_bracket === 'zen' ? '（' : '('; const tClose = config.opt_bracket === 'zen' ? '）' : ')';
-        text = text.replace(/[\(\)（）]/g, (m) => { const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t); });
-        if (config.opt_comma === 'comma') replaceWithDiff(/、/g, '，'); else replaceWithDiff(/，/g, '、');
+        text = text.replace(/[\(\)（）]/g, (m) => {
+            if (m.includes('___P_')) return m;
+            const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
+        });
+        if (config.opt_comma === 'comma') replaceSymWithDiff(/、/g, '，'); else replaceSymWithDiff(/，/g, '、');
         if (config.opt_mark_space !== 'keep') {
             const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
             text = text.replace(/([！？])([ 　]*)([^\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
-                if (space === markSpaceChar) return match;
+                if (match.includes('___P_') || space === markSpaceChar) return match;
                 const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
             });
         }
         text = text.replace(/．/g, isCompare ? '．【>.】' : '.').replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
-        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => { const han = String.fromCharCode(s.charCodeAt(0) - 0xFEE0); return isCompare ? `${s}【>${han}】` : han; });
+        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => {
+            if (s.includes('___P_')) return s;
+            const han = String.fromCharCode(s.charCodeAt(0) - 0xFEE0); return isCompare ? `${s}【>${han}】` : han;
+        });
 
-        if (activeStyle !== 'none') {
-            let finalRules = [];
-            document.getElementById('replaceList').value.split('\n').forEach(line => {
-                const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => finalRules.push({ from: c.trim(), to: parts[1].trim() }));
-            });
-            try {
-                const presets = JSON.parse(document.getElementById('presetsJson').value || '{}');
-                const styleData = presets[activeStyle] || {};
-                for (let key in styleData) key.split(',').forEach(c => { finalRules = finalRules.filter(r => r.from !== c.trim()); finalRules.push({ from: c.trim(), to: styleData[key] }); });
-            } catch(e) {}
-            finalRules.sort((a, b) => b.from.length - a.from.length);
-            const occurrenceMap = new Map();
-            finalRules.forEach(rule => {
-                if (!rule.from) return;
-                const regex = new RegExp(`[米独仏日英韓中]*${rule.from.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'g');
-                text = text.replace(regex, (match) => {
-                    if (match.includes('___P_')) return match;
-                    const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
-                    let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
-                    return (match === targetTo) ? match : (isCompare ? `${match}【>${targetTo}】` : targetTo);
-                });
-            });
-        }
-
-        // 5. 保護解除 ＆ 仕上げ
+        // 5. カプセル解除 ＆ 仕上げ
         text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
         for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
         text = text.replace(/\n{3,}/g, '\n\n').trim();
@@ -348,6 +356,7 @@
         }
         document.getElementById('charCount').innerText = `文字数: ${text.length} | 全角換算: ${Math.ceil(zenCount)}`;
     }
+    function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
 </script>
 </body>
 </html>
