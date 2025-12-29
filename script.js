@@ -1,15 +1,30 @@
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_comma','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
-let lastSynced = {}; let masterWhitelist = []; let currentSuggestions = [];
+let lastSynced = {}; 
+let masterWhitelist = []; 
+let masterCompanyList = []; 
+let loadedPresetsData = {}; // Full JSON object in memory (Rules + Options + Meta)
+let currentSuggestions = [];
 
 window.onload = function() {
     document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
     if(localStorage.getItem('gh_user')) document.getElementById('githubUser').value = localStorage.getItem('gh_user');
     if(localStorage.getItem('gh_repo')) document.getElementById('githubRepo').value = localStorage.getItem('gh_repo');
+    
+    // Restore local option settings first
     OPT_KEYS.forEach(id => {
-        const val = localStorage.getItem(id); if(val) document.getElementById(id).value = val;
-        document.getElementById(id).addEventListener('change', saveSettings);
+        const val = localStorage.getItem(id); 
+        if(val) document.getElementById(id).value = val;
+        document.getElementById(id).addEventListener('change', () => {
+            saveSettings();
+            // Clear style selection if manual change implies deviation
+            // document.getElementById('activeStyle').value = 'none'; // Optional behavior
+        });
     });
+    
     if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
+    
+    // Initial UI Setup
+    updateStyleSelect();
 };
 
 function saveSettings() {
@@ -36,7 +51,29 @@ function checkUnsaved(id) {
     else { status.innerText = "✅ 最新"; status.className = "list-status status-sync"; }
 }
 
-function onListInput() { checkUnsaved('whitelist'); masterWhitelist = document.getElementById('whitelist').value.split('\n'); }
+function onListInput(id) { 
+    checkUnsaved(id); 
+    if(id === 'whitelist') masterWhitelist = document.getElementById('whitelist').value.split('\n');
+    if(id === 'companyList') masterCompanyList = document.getElementById('companyList').value.split('\n');
+    checkConflicts();
+}
+
+function checkConflicts() {
+    const w = new Set(document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s));
+    const c = new Set(document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s));
+    const rLines = document.getElementById('replaceList').value.split('\n').map(s=>s.trim()).filter(s=>s);
+    
+    let conflict = false;
+    rLines.forEach(line => {
+        const key = line.split('>')[0].split(',')[0].trim();
+        if (w.has(key) || c.has(key)) conflict = true;
+    });
+    // Check W vs C
+    // (Intersection check can be added here)
+
+    const alertBox = document.getElementById('conflictAlert');
+    alertBox.style.display = conflict ? 'block' : 'none';
+}
 
 function filterList() {
     const query = document.getElementById('search_whitelist').value.toLowerCase();
@@ -45,23 +82,185 @@ function filterList() {
     else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
 }
 
+// --- Critical: Non-Destructive JSON Handling ---
+
 function jsonToText(jsonStr) {
     try {
-        const obj = JSON.parse(jsonStr); let text = "";
-        for (let style in obj) { text += `[${style}]\n`; for (let from in obj[style]) { text += `${from} > ${obj[style][from]}\n`; } text += "\n"; }
+        const obj = JSON.parse(jsonStr);
+        loadedPresetsData = obj; // Keep full object in memory
+        
+        let text = "";
+        for (let style in obj) {
+            text += `[${style}]\n`;
+            // Support both v1 (simple dict) and v2 (object with rules)
+            const rules = obj[style].rules ? obj[style].rules : obj[style];
+            // If it's v2 but has no rules key (e.g. only options), handle gracefully
+            if (typeof rules === 'object') {
+                for (let from in rules) {
+                    text += `${from} > ${rules[from]}\n`;
+                }
+            }
+            text += "\n";
+        }
+        updateStyleSelect(obj); // Update dropdown UI
         return text.trim();
-    } catch(e) { return jsonStr; }
+    } catch(e) { console.error(e); return jsonStr; }
 }
 
 function textToJson(text) {
-    const lines = text.split('\n'); const obj = {}; let cur = null;
+    // 1. Parse text area into a map: { "StyleName": { "ruleFrom": "ruleTo", ... } }
+    const lines = text.split('\n');
+    const newRulesMap = {};
+    let curStyle = null;
+    
     lines.forEach(l => {
         l = l.trim(); if (!l) return;
-        if (l.startsWith('[') && l.endsWith(']')) { cur = l.slice(1, -1); obj[cur] = {}; }
-        else if (cur && l.includes('>')) { const p = l.split('>').map(s => s.trim()); if (p.length === 2) obj[cur][p[0]] = p[1]; }
+        if (l.startsWith('[') && l.endsWith(']')) { 
+            curStyle = l.slice(1, -1); 
+            newRulesMap[curStyle] = {}; 
+        } else if (curStyle && l.includes('>')) { 
+            const p = l.split('>').map(s => s.trim()); 
+            if (p.length === 2) newRulesMap[curStyle][p[0]] = p[1]; 
+        }
     });
-    return JSON.stringify(obj, null, 2);
+
+    // 2. Merge into loadedPresetsData (Deep Copy approach to be safe)
+    let finalObj = JSON.parse(JSON.stringify(loadedPresetsData)); 
+    
+    // Update existing or add new
+    for (let styleName in newRulesMap) {
+        if (!finalObj[styleName]) {
+            // New style created via Text Area
+            finalObj[styleName] = { 
+                rules: newRulesMap[styleName], 
+                options: {}, 
+                _meta: { created: new Date().toISOString() } 
+            };
+        } else {
+            // Existing style: Update rules ONLY, preserve options/_meta
+            if (finalObj[styleName].rules) {
+                finalObj[styleName].rules = newRulesMap[styleName];
+            } else {
+                // Migrate v1 to v2 on the fly
+                const savedOptions = finalObj[styleName].options || {}; 
+                const savedMeta = finalObj[styleName]._meta || {};
+                // If it was v1, finalObj[styleName] was just the rules dict.
+                // But we are in "textToJson", so we rely on what was loaded.
+                // Simpler: Just force v2 structure
+                finalObj[styleName] = {
+                    rules: newRulesMap[styleName],
+                    options: savedOptions, // In case it existed
+                    _meta: savedMeta
+                };
+            }
+        }
+    }
+    
+    // Handle deletions? 
+    // If a style is removed from Text Area, should we remove it from JSON?
+    // YES, to keep sync.
+    for (let key in finalObj) {
+        if (!newRulesMap[key]) {
+            delete finalObj[key];
+        }
+    }
+
+    return JSON.stringify(finalObj, null, 2);
 }
+
+function updateStyleSelect(dataObj) {
+    const select = document.getElementById('activeStyle');
+    const currentVal = select.value;
+    const data = dataObj || loadedPresetsData;
+    
+    // Clear existing options (keep "none")
+    select.innerHTML = '<option value="none">なし (整形のみ)</option>';
+    
+    if (!data) return;
+    
+    Object.keys(data).forEach(style => {
+        const opt = document.createElement('option');
+        opt.value = style;
+        opt.innerText = style;
+        select.appendChild(opt);
+    });
+    
+    if (Object.keys(data).includes(currentVal)) {
+        select.value = currentVal;
+    }
+}
+
+function applyStyle(styleName) {
+    const infoSpan = document.getElementById('styleInfo');
+    if (styleName === 'none' || !loadedPresetsData[styleName]) {
+        infoSpan.innerText = "";
+        return;
+    }
+
+    const styleData = loadedPresetsData[styleName];
+    // Check if it has options
+    if (styleData.options && Object.keys(styleData.options).length > 0) {
+        // Apply options to UI
+        let appliedCount = 0;
+        for (let key in styleData.options) {
+            const el = document.getElementById(key);
+            if (el) {
+                el.value = styleData.options[key];
+                // Trigger change event to save to localStorage
+                el.dispatchEvent(new Event('change'));
+                appliedCount++;
+            }
+        }
+        infoSpan.innerText = `✅ ${appliedCount}個のオプションを適用`;
+    } else {
+        infoSpan.innerText = "ℹ️ オプション設定なし (辞書のみ)";
+    }
+}
+
+function saveCurrentStyleAsNew() {
+    const name = document.getElementById('newStyleName').value.trim();
+    if (!name) { alert("スタイル名を入力してください"); return; }
+    if (loadedPresetsData[name] && !confirm(`スタイル "${name}" は既に存在します。上書きしますか？`)) return;
+
+    // 1. Collect Options
+    const currentOptions = {};
+    OPT_KEYS.forEach(k => {
+        currentOptions[k] = document.getElementById(k).value;
+    });
+
+    // 2. Collect Rules (parse from current Text Area to be sure)
+    // We assume the user wants to save what they see in the text area? 
+    // OR, do they want to save the rules of the CURRENTLY selected style?
+    // UX: Usually "Save current settings as new style". 
+    // Since the Text Area shows ALL styles, we can't easily grab "current rules" unless we filter.
+    // Compromise: We add a new entry to the JSON with Empty Rules (or rules from active style?)
+    // Better: Just save the Options structure. Rules must be added via the Text Area.
+    // WAIT: The user expectation is "Save my Config".
+    
+    // Let's create the entry in loadedPresetsData
+    if (!loadedPresetsData[name]) {
+        loadedPresetsData[name] = { rules: {}, options: {}, _meta: { created: new Date().toISOString() } };
+    }
+    
+    // Update options
+    loadedPresetsData[name].options = currentOptions;
+    
+    // If text area needs update
+    // We append the new style header to text area if not present
+    const textArea = document.getElementById('presetsJson');
+    if (!textArea.value.includes(`[${name}]`)) {
+        textArea.value += `\n[${name}]\n`;
+    }
+
+    // Update global object and sync
+    document.getElementById('presetsJson').value = jsonToText(JSON.stringify(loadedPresetsData));
+    checkUnsaved('presetsJson');
+    updateStyleSelect();
+    document.getElementById('activeStyle').value = name;
+    alert(`スタイル "${name}" を保存しました。\n[3. スタイル定義] の同期ボタンでクラウドに保存してください。`);
+}
+
+// --- End of JSON Logic ---
 
 function suggestRules() {
     const out = document.getElementById('output').innerText; if(!out) { alert("まずは整形を実行してください。"); return; }
@@ -99,24 +298,44 @@ async function syncList(fileName, elementId) {
             const data = await res.json();
             let remote = decodeURIComponent(escape(atob(data.content)));
             let displayContent = remote;
-            if (elementId === 'presetsJson') displayContent = jsonToText(remote);
-            if (elementId === 'whitelist' || elementId === 'replaceList') {
+            
+            // Special handling based on ID
+            if (elementId === 'presetsJson') {
+                displayContent = jsonToText(remote); // Load logic triggers here
+            } else {
+                // Whitelist, ReplaceList, CompanyList: sort and unique
                 const lines = (remote.includes(',') && !remote.includes('\n')) ? remote.split(',').map(s=>s.trim()) : remote.split('\n').map(s=>s.trim());
                 displayContent = Array.from(new Set(lines)).filter(s=>s!=="").sort((a,b)=>a.localeCompare(b,'ja')).join('\n');
+                
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
+                if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
             }
+
             if (textArea.value.trim() !== "" && textArea.value.trim() !== displayContent.trim()) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
                     let finalToSave = textArea.value;
-                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value);
+                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value); // Use safe merge
+                    
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
-                    alert("保存完了"); displayContent = textArea.value;
+                    alert("保存完了"); displayContent = textArea.value; 
+                    // Re-load to ensure memory sync
+                    if (elementId === 'presetsJson') jsonToText(finalToSave);
                 }
             }
             textArea.value = displayContent; lastSynced[elementId] = displayContent; checkUnsaved(elementId); alert("同期完了");
+            if(elementId !== 'presetsJson') checkConflicts();
+        } else if(res.status === 404) {
+             // Handle new file case (Company List might not exist yet)
+             if(confirm(`ファイル ${fileName} が見つかりません。新規作成しますか？`)) {
+                 let content = textArea.value;
+                 if (elementId === 'presetsJson') content = "{}";
+                 await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: `Create ${fileName}`, content: btoa(unescape(encodeURIComponent(content))) }) });
+                 alert("ファイルを作成しました。"); lastSynced[elementId] = textArea.value; checkUnsaved(elementId);
+             }
         }
-    } catch (e) { alert("同期エラー"); }
+    } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
 function processText() {
@@ -135,8 +354,12 @@ function processText() {
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    const whitelist = document.getElementById('whitelist').value.split('\n').map(s => s.trim()).filter(s => s !== "");
-    whitelist.forEach((word, i) => {
+    // Combine Whitelist(Shield 1) and CompanyList(Shield 2)
+    const whitelistRaw = document.getElementById('whitelist').value.split('\n');
+    const companyRaw = document.getElementById('companyList').value.split('\n');
+    const combinedShield = [...whitelistRaw, ...companyRaw].map(s => s.trim()).filter(s => s !== "");
+
+    combinedShield.forEach((word, i) => {
         const noSpaceWord = word.replace(/\s+/g, '');
         const spacedRegex = new RegExp(noSpaceWord.split('').join('[\\s\\n]*'), 'gi');
         text = text.replace(spacedRegex, (match) => {
@@ -156,12 +379,23 @@ function processText() {
     document.getElementById('replaceList').value.split('\n').forEach(line => {
         const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
     });
-    if (activeStyle !== 'none') {
+    
+    // Style Rules Application
+    if (activeStyle !== 'none' && loadedPresetsData[activeStyle]) {
         try {
-            const presets = JSON.parse(textToJson(document.getElementById('presetsJson').value));
-            const styleData = presets[activeStyle] || {};
-            for (let key in styleData) key.split(',').forEach(c => { allRules = allRules.filter(r => r.from !== c.trim()); allRules.push({ from: c.trim(), to: styleData[key] }); });
-        } catch(e) {}
+            // Support both v1 and v2 structure
+            const styleObj = loadedPresetsData[activeStyle];
+            const rules = styleObj.rules ? styleObj.rules : styleObj; // Fallback for pure dict
+            
+            if (typeof rules === 'object') {
+                for (let key in rules) {
+                    key.split(',').forEach(c => {
+                        allRules = allRules.filter(r => r.from !== c.trim());
+                        allRules.push({ from: c.trim(), to: rules[key] });
+                    });
+                }
+            }
+        } catch(e) { console.error("Style apply error", e); }
     }
     allRules.sort((a, b) => b.from.length - a.from.length);
 
