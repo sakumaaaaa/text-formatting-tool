@@ -96,7 +96,7 @@ function jsonToText(jsonStr) {
             }
             text += "\n";
         }
-        updateStyleSelect(obj); // Update dropdown UI
+        updateStyleSelect(obj);
         return text.trim();
     } catch(e) { console.error(e); return jsonStr; }
 }
@@ -134,7 +134,7 @@ function textToJson(text) {
                 const savedMeta = finalObj[styleName]._meta || {};
                 finalObj[styleName] = {
                     rules: newRulesMap[styleName],
-                    options: savedOptions, 
+                    options: savedOptions,
                     _meta: savedMeta
                 };
             }
@@ -263,10 +263,11 @@ async function syncList(fileName, elementId) {
             let displayContent = remote;
             
             if (elementId === 'presetsJson') {
-                displayContent = jsonToText(remote); 
+                displayContent = jsonToText(remote);
             } else {
+                // Modified Logic: No Sort, Just Deduplicate & Filter Empty Lines
                 const lines = (remote.includes(',') && !remote.includes('\n')) ? remote.split(',').map(s=>s.trim()) : remote.split('\n').map(s=>s.trim());
-                // MODIFIED: Removed .sort(), keeping .filter and Set
+                // Old: .sort((a,b)=>a.localeCompare(b,'ja')) -> Removed
                 displayContent = Array.from(new Set(lines)).filter(s=>s!=="").join('\n');
                 
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
@@ -276,7 +277,7 @@ async function syncList(fileName, elementId) {
             if (textArea.value.trim() !== "" && textArea.value.trim() !== displayContent.trim()) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
                     let finalToSave = textArea.value;
-                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value); 
+                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value);
                     
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
@@ -342,7 +343,7 @@ function processText() {
     if (activeStyle !== 'none' && loadedPresetsData[activeStyle]) {
         try {
             const styleObj = loadedPresetsData[activeStyle];
-            const rules = styleObj.rules ? styleObj.rules : styleObj; 
+            const rules = styleObj.rules ? styleObj.rules : styleObj;
             
             if (typeof rules === 'object') {
                 for (let key in rules) {
