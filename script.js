@@ -63,13 +63,13 @@ function checkConflicts() {
     
     const protectedSet = new Set(wLines);
     
-    // v30.4: Parse Company List (support "Source > Target")
+    // v30.5: Robust Conflict Detection for "Source > Target"
     cLines.forEach(line => {
         if (line.includes('>')) {
             const parts = line.split('>');
-            const target = parts[1].trim();
-            protectedSet.add(target);
-            parts[0].split(',').forEach(s => protectedSet.add(s.trim()));
+            // Register both Source and Target as "Used/Protected"
+            parts[1].split('|').forEach(t => protectedSet.add(t.trim())); // Target
+            parts[0].split(',').forEach(s => protectedSet.add(s.trim())); // Sources
         } else {
             protectedSet.add(line);
         }
@@ -311,7 +311,7 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- Core Logic (v30.4 Polyglot) ---
+// --- Core Logic (v30.5 Logic Branching) ---
 
 function getFuzzyRegExp(word) {
     if (!word) return null;
@@ -337,22 +337,35 @@ function processText() {
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // Step 1: Cleansing (Company List)
-    // v30.4: Parse line for "Source > Target" pattern
+    // Step 1: Company List (Behavior varies by Style)
+    // ID: companyList
     const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     companyList.forEach(line => {
         let targets = [];
         let replacement = "";
+        let shouldProtect = false; // For Case B
 
         if (line.includes('>')) {
-            // Pattern A: Source > Target
             const parts = line.split('>');
             replacement = parts[1].trim();
-            targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
+            
+            if (activeStyle === 'none') {
+                // Case B: No Style. Ignore Left. Use Right as Shield.
+                targets = [replacement];
+                shouldProtect = true;
+            } else {
+                // Case A: Style Active. Use Left as Source. Cleansing only (No Protection).
+                targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
+                // Also include self-repair for the replacement itself
+                targets.push(replacement);
+                shouldProtect = false;
+            }
         } else {
-            // Pattern B: TargetOnly (Self-repair)
+            // TargetOnly. Always self-repair.
             replacement = line;
             targets = [line];
+            // If No Style, we protect this word to keep its spaces.
+            if (activeStyle === 'none') shouldProtect = true;
         }
 
         targets.forEach(src => {
@@ -360,7 +373,15 @@ function processText() {
             if (!regex) return;
             text = text.replace(regex, (match) => {
                 if (match.includes('___P_')) return match;
-                // v30.1 Policy: Cleansing only, NO Protection
+                
+                // If protecting (Case B), we capsule it.
+                if (shouldProtect) {
+                    const p = `___P_WL_CMP_${Math.random().toString(36).slice(-2)}___`;
+                    protectedItems.push({p, val: replacement});
+                    return p;
+                }
+                
+                // Else just cleansing (Case A)
                 return replacement;
             });
         });
