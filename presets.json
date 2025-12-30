@@ -18,14 +18,20 @@
       "Apple": "米Apple | Apple",
       "Infineon Technologies": "独Infineon Technologies | Infineon Technologies",
       "DuPont": "独DuPont | DuPont",
-      "STMicroelectronics": "スイスSTMicroelectronics | STMicroelectronics"
+      "STMicroelectronics": "スイスSTMicroelectronics | STMicroelectronics",
+      "Taiwan Semiconductor Manufacturing Company": "台湾TSMC | TSMC",
+      "Samsung Electronics": "韓国Samsung Electronics | Samsung Electronics",
+      "Advanced Micro Devices": "米AMD | AMD",
+      "Texas Instruments": "米Texas Instruments | TI"
     },
     "options": {},
     "_meta": {}
   },
   "汎用（英名）": {
     "rules": {
-      "description": "共通マスタで英語化されるため、ここは空で機能します"
+      "アップル": "Apple",
+      "インフィニオン": "Infineon Technologies",
+      "デュポン": "DuPont"
     },
     "options": {},
     "_meta": {}
@@ -36,9 +42,11 @@
       "Infineon Technologies": "インフィニオン",
       "DuPont": "デュポン",
       "NVIDIA": "エヌビディア",
+      "Taiwan Semiconductor Manufacturing Company": "TSMC",
       "Samsung Electronics": "サムスン電子",
-      "Taiwan Semiconductor Manufacturing Company": "台湾TSMC",
-      "STMicroelectronics": "STマイクロエレクトロニクス"
+      "Advanced Micro Devices": "AMD",
+      "Texas Instruments": "TI",
+      "STMicroelectronics": "STマイクロ"
     },
     "options": {},
     "_meta": {}
