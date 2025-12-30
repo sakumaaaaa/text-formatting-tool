@@ -1,4 +1,4 @@
 In tel, lntel, Int el, 米Intel, Intl > Intel
-T S M C, TSM C, 台湾TSMC, TSMC > Taiwan Semiconductor Manufacturing Company
+T S M C, TSM C, 台湾TSMC, TSMC TMSC > Taiwan Semiconductor Manufacturing Company
 A M D, 米AMD, AMD > Advanced Micro Devices
 A pple, App le, Aplle, 米Apple, Apple > Apple
