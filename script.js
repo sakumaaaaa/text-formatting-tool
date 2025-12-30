@@ -19,6 +19,9 @@ window.onload = function() {
         });
     });
     
+    // Fix: Dark Mode Event Binding (v30.6)
+    document.getElementById('modeBtn').addEventListener('click', toggleDarkMode);
+
     if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
     
     // Initial UI Setup
@@ -57,19 +60,22 @@ function onListInput(id) {
 }
 
 function checkConflicts() {
+    // v30.6 Fix: Disable conflict warning to reduce noise.
+    // Overlapping between Protection(Box1,2) and Replacement(Box3,4) is valid behavior.
+    const alertBox = document.getElementById('conflictAlert');
+    if(alertBox) alertBox.style.display = 'none';
+
+    /* Logic preserved for future reference or debug mode:
     const wLines = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
     const cLines = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     const rLines = document.getElementById('replaceList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     
     const protectedSet = new Set(wLines);
-    
-    // v30.5: Robust Conflict Detection for "Source > Target"
     cLines.forEach(line => {
         if (line.includes('>')) {
             const parts = line.split('>');
-            // Register both Source and Target as "Used/Protected"
-            parts[1].split('|').forEach(t => protectedSet.add(t.trim())); // Target
-            parts[0].split(',').forEach(s => protectedSet.add(s.trim())); // Sources
+            parts[1].split('|').forEach(t => protectedSet.add(t.trim()));
+            parts[0].split(',').forEach(s => protectedSet.add(s.trim()));
         } else {
             protectedSet.add(line);
         }
@@ -81,8 +87,8 @@ function checkConflicts() {
         if (protectedSet.has(key)) conflict = true;
     });
 
-    const alertBox = document.getElementById('conflictAlert');
     alertBox.style.display = conflict ? 'block' : 'none';
+    */
 }
 
 function filterList() {
