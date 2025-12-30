@@ -14,8 +14,18 @@
 大山聡 > 大山 聡
 明暗が分かれ > 明暗が別れ
 
-; === 企業名正規化（ここに追加していく） ===
-アップル > Apple
+; === 企業名正規化（自己置換による保護を含む） ===
+; 先に長い正式名称を定義（マッチさせて維持、または国名除去）
+Infineon Technologies > Infineon Technologies
+Samsung Electronics > Samsung Electronics
+Advanced Micro Devices > Advanced Micro Devices
+Taiwan Semiconductor Manufacturing Company > Taiwan Semiconductor Manufacturing Company
+Texas Instruments > Texas Instruments
+STMicroelectronics > STMicroelectronics
+DuPont > DuPont
+
+; その後に略称やカナからの正規化
+アップル, Apple > Apple
 インフィニオン, Infineon > Infineon Technologies
 デュポン > DuPont
 サムスン電子, サムスン > Samsung Electronics
