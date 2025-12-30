@@ -297,7 +297,7 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- Core Logic (v30.2 Patch) ---
+// --- Core Logic (v30.3 Strict Prefix) ---
 
 function getFuzzyRegExp(word) {
     if (!word) return null;
@@ -380,10 +380,10 @@ function processText() {
     allRules.sort((a, b) => b.from.length - a.from.length);
 
     const occurrenceMap = new Map();
-    // v30.2 Change: Apply prefixes ONLY when style is active to prevent over-correction
+    // v30.3 Change: Revert to strict single-character list. Multi-char prefixes (e.g. Europe) are dangerous.
     let prefixPattern = "";
     if (activeStyle !== 'none') {
-        prefixPattern = "(?:スイス|台湾|韓国|米国|カナダ|欧州|台|豪|米|独|仏|日|英|韓|中|伊|蘭|瑞|社)*";
+        prefixPattern = "[台豪米独仏日英韓中]*"; 
     }
     
     allRules.forEach((rule, idx) => {
@@ -407,9 +407,6 @@ function processText() {
     });
 
     // Step 4: Formatting & Symbols
-    // v30.2 Change: Removed aggressive space removal loop that destroyed "Advanced Micro Devices"
-    
-    // Keeping safe normalizations only:
     text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
 
     const replaceSymWithDiff = (regex, target) => { text = text.replace(regex, (m) => (m.includes('___P_') || m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); };
