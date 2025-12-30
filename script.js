@@ -16,8 +16,6 @@ window.onload = function() {
         if(val) document.getElementById(id).value = val;
         document.getElementById(id).addEventListener('change', () => {
             saveSettings();
-            // Clear style selection if manual change implies deviation
-            // document.getElementById('activeStyle').value = 'none'; // Optional behavior
         });
     });
     
@@ -68,8 +66,6 @@ function checkConflicts() {
         const key = line.split('>')[0].split(',')[0].trim();
         if (w.has(key) || c.has(key)) conflict = true;
     });
-    // Check W vs C
-    // (Intersection check can be added here)
 
     const alertBox = document.getElementById('conflictAlert');
     alertBox.style.display = conflict ? 'block' : 'none';
@@ -92,9 +88,7 @@ function jsonToText(jsonStr) {
         let text = "";
         for (let style in obj) {
             text += `[${style}]\n`;
-            // Support both v1 (simple dict) and v2 (object with rules)
             const rules = obj[style].rules ? obj[style].rules : obj[style];
-            // If it's v2 but has no rules key (e.g. only options), handle gracefully
             if (typeof rules === 'object') {
                 for (let from in rules) {
                     text += `${from} > ${rules[from]}\n`;
@@ -108,7 +102,6 @@ function jsonToText(jsonStr) {
 }
 
 function textToJson(text) {
-    // 1. Parse text area into a map: { "StyleName": { "ruleFrom": "ruleTo", ... } }
     const lines = text.split('\n');
     const newRulesMap = {};
     let curStyle = null;
@@ -124,41 +117,30 @@ function textToJson(text) {
         }
     });
 
-    // 2. Merge into loadedPresetsData (Deep Copy approach to be safe)
     let finalObj = JSON.parse(JSON.stringify(loadedPresetsData)); 
     
-    // Update existing or add new
     for (let styleName in newRulesMap) {
         if (!finalObj[styleName]) {
-            // New style created via Text Area
             finalObj[styleName] = { 
                 rules: newRulesMap[styleName], 
                 options: {}, 
                 _meta: { created: new Date().toISOString() } 
             };
         } else {
-            // Existing style: Update rules ONLY, preserve options/_meta
             if (finalObj[styleName].rules) {
                 finalObj[styleName].rules = newRulesMap[styleName];
             } else {
-                // Migrate v1 to v2 on the fly
                 const savedOptions = finalObj[styleName].options || {}; 
                 const savedMeta = finalObj[styleName]._meta || {};
-                // If it was v1, finalObj[styleName] was just the rules dict.
-                // But we are in "textToJson", so we rely on what was loaded.
-                // Simpler: Just force v2 structure
                 finalObj[styleName] = {
                     rules: newRulesMap[styleName],
-                    options: savedOptions, // In case it existed
+                    options: savedOptions, 
                     _meta: savedMeta
                 };
             }
         }
     }
     
-    // Handle deletions? 
-    // If a style is removed from Text Area, should we remove it from JSON?
-    // YES, to keep sync.
     for (let key in finalObj) {
         if (!newRulesMap[key]) {
             delete finalObj[key];
@@ -173,7 +155,6 @@ function updateStyleSelect(dataObj) {
     const currentVal = select.value;
     const data = dataObj || loadedPresetsData;
     
-    // Clear existing options (keep "none")
     select.innerHTML = '<option value="none">なし (整形のみ)</option>';
     
     if (!data) return;
@@ -198,15 +179,12 @@ function applyStyle(styleName) {
     }
 
     const styleData = loadedPresetsData[styleName];
-    // Check if it has options
     if (styleData.options && Object.keys(styleData.options).length > 0) {
-        // Apply options to UI
         let appliedCount = 0;
         for (let key in styleData.options) {
             const el = document.getElementById(key);
             if (el) {
                 el.value = styleData.options[key];
-                // Trigger change event to save to localStorage
                 el.dispatchEvent(new Event('change'));
                 appliedCount++;
             }
@@ -222,37 +200,22 @@ function saveCurrentStyleAsNew() {
     if (!name) { alert("スタイル名を入力してください"); return; }
     if (loadedPresetsData[name] && !confirm(`スタイル "${name}" は既に存在します。上書きしますか？`)) return;
 
-    // 1. Collect Options
     const currentOptions = {};
     OPT_KEYS.forEach(k => {
         currentOptions[k] = document.getElementById(k).value;
     });
 
-    // 2. Collect Rules (parse from current Text Area to be sure)
-    // We assume the user wants to save what they see in the text area? 
-    // OR, do they want to save the rules of the CURRENTLY selected style?
-    // UX: Usually "Save current settings as new style". 
-    // Since the Text Area shows ALL styles, we can't easily grab "current rules" unless we filter.
-    // Compromise: We add a new entry to the JSON with Empty Rules (or rules from active style?)
-    // Better: Just save the Options structure. Rules must be added via the Text Area.
-    // WAIT: The user expectation is "Save my Config".
-    
-    // Let's create the entry in loadedPresetsData
     if (!loadedPresetsData[name]) {
         loadedPresetsData[name] = { rules: {}, options: {}, _meta: { created: new Date().toISOString() } };
     }
     
-    // Update options
     loadedPresetsData[name].options = currentOptions;
     
-    // If text area needs update
-    // We append the new style header to text area if not present
     const textArea = document.getElementById('presetsJson');
     if (!textArea.value.includes(`[${name}]`)) {
         textArea.value += `\n[${name}]\n`;
     }
 
-    // Update global object and sync
     document.getElementById('presetsJson').value = jsonToText(JSON.stringify(loadedPresetsData));
     checkUnsaved('presetsJson');
     updateStyleSelect();
@@ -299,13 +262,12 @@ async function syncList(fileName, elementId) {
             let remote = decodeURIComponent(escape(atob(data.content)));
             let displayContent = remote;
             
-            // Special handling based on ID
             if (elementId === 'presetsJson') {
-                displayContent = jsonToText(remote); // Load logic triggers here
+                displayContent = jsonToText(remote); 
             } else {
-                // Whitelist, ReplaceList, CompanyList: sort and unique
                 const lines = (remote.includes(',') && !remote.includes('\n')) ? remote.split(',').map(s=>s.trim()) : remote.split('\n').map(s=>s.trim());
-                displayContent = Array.from(new Set(lines)).filter(s=>s!=="").sort((a,b)=>a.localeCompare(b,'ja')).join('\n');
+                // MODIFIED: Removed .sort(), keeping .filter and Set
+                displayContent = Array.from(new Set(lines)).filter(s=>s!=="").join('\n');
                 
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
@@ -314,19 +276,17 @@ async function syncList(fileName, elementId) {
             if (textArea.value.trim() !== "" && textArea.value.trim() !== displayContent.trim()) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
                     let finalToSave = textArea.value;
-                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value); // Use safe merge
+                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value); 
                     
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
                     alert("保存完了"); displayContent = textArea.value; 
-                    // Re-load to ensure memory sync
                     if (elementId === 'presetsJson') jsonToText(finalToSave);
                 }
             }
             textArea.value = displayContent; lastSynced[elementId] = displayContent; checkUnsaved(elementId); alert("同期完了");
             if(elementId !== 'presetsJson') checkConflicts();
         } else if(res.status === 404) {
-             // Handle new file case (Company List might not exist yet)
              if(confirm(`ファイル ${fileName} が見つかりません。新規作成しますか？`)) {
                  let content = textArea.value;
                  if (elementId === 'presetsJson') content = "{}";
@@ -354,7 +314,6 @@ function processText() {
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // Combine Whitelist(Shield 1) and CompanyList(Shield 2)
     const whitelistRaw = document.getElementById('whitelist').value.split('\n');
     const companyRaw = document.getElementById('companyList').value.split('\n');
     const combinedShield = [...whitelistRaw, ...companyRaw].map(s => s.trim()).filter(s => s !== "");
@@ -380,12 +339,10 @@ function processText() {
         const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
     });
     
-    // Style Rules Application
     if (activeStyle !== 'none' && loadedPresetsData[activeStyle]) {
         try {
-            // Support both v1 and v2 structure
             const styleObj = loadedPresetsData[activeStyle];
-            const rules = styleObj.rules ? styleObj.rules : styleObj; // Fallback for pure dict
+            const rules = styleObj.rules ? styleObj.rules : styleObj; 
             
             if (typeof rules === 'object') {
                 for (let key in rules) {
