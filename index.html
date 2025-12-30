@@ -86,7 +86,7 @@
                 <div class="opt-item"><span>＆ アンパサンド</span><select id="opt_ampersand"><option value="zen">全角 ＆</option><option value="han">半角 &</option></select></div>
                 <div class="opt-item"><span>（ ）カッコ</span><select id="opt_bracket"><option value="zen">全角 （ ）</option><option value="han">半角 ( )</option></select></div>
                 <div class="opt-item"><span>： コロン</span><select id="opt_colon"><option value="zen">全角 ：</option><option value="han">半角 :</option></select></div>
-                <div class="opt-item"><span>読点</span><select id="opt_comma"><option value="ten">テン 、</option><option value="comma">カンマ ，</option></select></div>
+                <div class="opt-item"><span>読点・句点</span><select id="opt_punctuation"><option value="ten_maru">テン・マル 、。</option><option value="comma_maru">カンマ・マル ，。</option><option value="comma_period">カンマ・ピリ ，．</option></select></div>
                 <div class="opt-item"><span>引用符</span><select id="opt_quote"><option value="zen">全角 “”</option><option value="han">半角 ""</option></select></div>
                 <div class="opt-item"><span>― ダーシ</span><select id="opt_dash"><option value="zen">全角 ―</option><option value="han">半角 -</option></select></div>
                 <div class="opt-item"><span>- ハイフン</span><select id="opt_hyphen"><option value="han">半角 -</option><option value="zen">全角 －</option></select></div>
@@ -95,11 +95,19 @@
                 <div class="opt-item"><span>感嘆疑問 ！ ？</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
                 <div class="opt-item"><span>！ ？ 後の空き</span><select id="opt_mark_space"><option value="keep">維持</option><option value="force">全角アキ強制</option><option value="none">詰める</option></select></div>
             </div>
-            <!-- Style Save UI -->
-            <div style="margin-top:15px; padding-top:10px; border-top:1px dashed var(--border-color); display:flex; align-items:center; gap:10px; justify-content:flex-end;">
-                <span style="font-size:0.8rem; font-weight:bold; color:var(--accent-purple);">現在の設定（ルール＋オプション）を保存:</span>
-                <input type="text" id="newStyleName" placeholder="新しいスタイル名" style="padding:4px; font-size:0.8rem; width:150px;">
-                <button onclick="saveCurrentStyleAsNew()" style="background:var(--accent-purple); padding:5px 10px; font-size:0.8rem;">💾 スタイル追加</button>
+            <!-- Style Save UI (Updated v30.6) -->
+            <div style="margin-top:15px; padding-top:10px; border-top:1px dashed var(--border-color);">
+                <!-- Update Existing -->
+                <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:10px;">
+                    <span id="updateLabel" style="font-size:0.8rem; margin-right:10px; color:#666;">適用中のスタイルを更新:</span>
+                    <button id="btnUpdateStyle" onclick="updateCurrentStyle()" style="background:var(--accent-orange); padding:5px 10px; font-size:0.8rem;" disabled>🔄 選択されていません</button>
+                </div>
+                <!-- Create New -->
+                <div style="display:flex; justify-content:flex-end; align-items:center; gap:10px;">
+                    <span style="font-size:0.8rem; font-weight:bold; color:var(--accent-purple);">現在の設定で新規作成:</span>
+                    <input type="text" id="newStyleName" placeholder="新規スタイル名" style="padding:4px; font-size:0.8rem; width:150px;">
+                    <button onclick="createNewStyle()" style="background:var(--accent-purple); padding:5px 10px; font-size:0.8rem;">💾 新規作成</button>
+                </div>
             </div>
         </div>
     </details>
