@@ -332,4 +332,121 @@ function processText() {
             if (match.includes('___P_')) return match;
             return word;
         });
+    });
+
+    // Step 2: Absolute Defense (Whitelist)
+    const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
+    whitelist.forEach((word, i) => {
+        const regex = getFuzzyRegExp(word);
+        if (!regex) return;
+        text = text.replace(regex, (match) => {
+            if (match.includes('___P_')) return match;
+            const hasNewline = match.includes('\n');
+            let resultWord = word;
+            if (match === word && !hasNewline) resultWord = word;
+            
+            const val = (isCompare && match !== word && match.replace(/[\s\n]+/g, '') === word) 
+                        ? (match.includes('\n') ? word : `${match}【>${word}】`) 
+                        : word;
+            
+            const p = `___P_WL_${i}_${Math.random().toString(36).slice(-2)}___`;
+            protectedItems.push({p, val: word}); 
+            return p;
+        });
+    });
+
+    text = text.replace(/\n/g, ''); 
+    
+    // Step 3: Construction (Replace)
+    let allRules = [];
+    document.getElementById('replaceList').value.split('\n').forEach(line => {
+        const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
+    });
+    
+    if (activeStyle !== 'none' && loadedPresetsData[activeStyle]) {
+        try {
+            const styleObj = loadedPresetsData[activeStyle];
+            const rules = styleObj.rules ? styleObj.rules : styleObj;
+            if (typeof rules === 'object') {
+                for (let key in rules) {
+                    key.split(',').forEach(c => {
+                        allRules = allRules.filter(r => r.from !== c.trim());
+                        allRules.push({ from: c.trim(), to: rules[key] });
+                    });
+                }
+            }
+        } catch(e) { console.error("Style apply error", e); }
     }
+    allRules.sort((a, b) => b.from.length - a.from.length);
+
+    const occurrenceMap = new Map();
+    // v30.2 Change: Apply prefixes ONLY when style is active to prevent over-correction
+    let prefixPattern = "";
+    if (activeStyle !== 'none') {
+        prefixPattern = "(?:スイス|台湾|韓国|米国|カナダ|欧州|台|豪|米|独|仏|日|英|韓|中|伊|蘭|瑞|社)*";
+    }
+    
+    allRules.forEach((rule, idx) => {
+        if (!rule.from) return;
+        
+        const fuzzyKey = rule.from.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('[\\s\\n]*');
+        const regex = new RegExp(`${prefixPattern}${fuzzyKey}`, 'gi');
+
+        text = text.replace(regex, (match) => {
+            if (match.includes('___P_')) return match;
+            
+            const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
+            let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
+            
+            if (match === targetTo) return match;
+
+            const result = isCompare ? `${match}【>${targetTo}】` : targetTo;
+            const p = `___P_RV_${idx}_${Math.random().toString(36).slice(-2)}___`;
+            protectedItems.push({p, val: result}); return p;
+        });
+    });
+
+    // Step 4: Formatting & Symbols
+    // v30.2 Change: Removed aggressive space removal loop that destroyed "Advanced Micro Devices"
+    
+    // Keeping safe normalizations only:
+    text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
+
+    const replaceSymWithDiff = (regex, target) => { text = text.replace(regex, (m) => (m.includes('___P_') || m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); };
+    replaceSymWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
+    replaceSymWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
+    replaceSymWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
+    replaceSymWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
+    replaceSymWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
+    const tOpen = config.opt_bracket === 'zen' ? '（' : '('; const tClose = config.opt_bracket === 'zen' ? '）' : ')';
+    text = text.replace(/[\(\)（）]/g, (m) => {
+        if (m.includes('___P_')) return m;
+        const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
+    });
+    if (config.opt_comma === 'comma') replaceSymWithDiff(/、/g, '，'); else replaceSymWithDiff(/，/g, '、');
+    
+    if (config.opt_mark_space !== 'keep') {
+        const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
+        text = text.replace(/([！？])([ 　]*)([^\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
+            if (match.includes('___P_') || space === markSpaceChar) return match;
+            const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
+        });
+    }
+    
+    text = text.replace(/．/g, isCompare ? '．【>.】' : '.').replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
+    text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
+
+    text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
+    for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+    if (hasStartSpace) text = '　' + text.replace(/^___S_Z_SP___/, '');
+
+    if (isCompare) document.getElementById('output').innerHTML = text.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
+    else document.getElementById('output').innerText = text;
+    let zenCount = 0; for (let i = 0; i < text.length; i++) {
+        const c = text.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
+    }
+    document.getElementById('charCount').innerText = `文字数: ${text.length} | 全角換算: ${Math.ceil(zenCount)}`;
+}
+
+function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
