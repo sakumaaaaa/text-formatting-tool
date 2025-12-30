@@ -1,3 +1,4 @@
+■ presets.json
 {
   "サイエンス": {
     "rules": {
@@ -27,13 +28,9 @@
   },
   "汎用（英名）": {
     "rules": {
-      "Apple": "Apple",
-      "Infineon Technologies": "Infineon Technologies",
-      "DuPont": "DuPont",
-      "Samsung Electronics": "Samsung Electronics",
-      "Texas Instruments": "Texas Instruments",
-      "Advanced Micro Devices": "Advanced Micro Devices",
-      "Taiwan Semiconductor Manufacturing Company": "TSMC"
+      "アップル": "Apple",
+      "インフィニオン": "Infineon Technologies",
+      "デュポン": "DuPont"
     },
     "options": {},
     "_meta": {}
@@ -43,12 +40,12 @@
       "Apple": "アップル",
       "Infineon Technologies": "インフィニオン",
       "DuPont": "デュポン",
+      "NVIDIA": "エヌビディア",
+      "Taiwan Semiconductor Manufacturing Company": "TSMC",
       "Samsung Electronics": "サムスン電子",
       "Advanced Micro Devices": "AMD",
       "Texas Instruments": "TI",
-      "Taiwan Semiconductor Manufacturing Company": "TSMC",
-      "STMicroelectronics": "STマイクロ",
-      "NVIDIA": "エヌビディア"
+      "STMicroelectronics": "STマイクロ"
     },
     "options": {},
     "_meta": {}
