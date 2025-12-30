@@ -1,3 +1,4 @@
+; === 既存ルール ===
 アクチュエーター, アクチュエータ > アクチュエータ
 ウェハ, ウェハー, ウエハー, ウェーハ, ウエーハ > ウエハ
 コンピューター > コンピュータ
@@ -12,3 +13,13 @@
 携帯電話 > 携帯電話【〓デバイスの場合は携帯電話機〓】
 大山聡 > 大山 聡
 明暗が分かれ > 明暗が別れ
+
+; === 企業名正規化（ここに追加していく） ===
+アップル > Apple
+インフィニオン, Infineon > Infineon Technologies
+デュポン > DuPont
+サムスン電子, サムスン > Samsung Electronics
+TSMC > Taiwan Semiconductor Manufacturing Company
+AMD > Advanced Micro Devices
+TI, テキサス・インスツルメンツ > Texas Instruments
+STマイクロ, STマイクロエレクトロニクス > STMicroelectronics
