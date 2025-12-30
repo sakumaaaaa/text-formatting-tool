@@ -25,9 +25,7 @@
   },
   "汎用（英名）": {
     "rules": {
-      "アップル": "Apple",
-      "インフィニオン": "Infineon Technologies",
-      "デュポン": "DuPont"
+      "description": "共通マスタで英語化されるため、ここは空で機能します"
     },
     "options": {},
     "_meta": {}
@@ -35,9 +33,12 @@
   "汎用（和名）": {
     "rules": {
       "Apple": "アップル",
-      "Infineon": "インフィニオン",
+      "Infineon Technologies": "インフィニオン",
       "DuPont": "デュポン",
-      "NVIDIA": "エヌビディア"
+      "NVIDIA": "エヌビディア",
+      "Samsung Electronics": "サムスン電子",
+      "Taiwan Semiconductor Manufacturing Company": "台湾TSMC",
+      "STMicroelectronics": "STマイクロエレクトロニクス"
     },
     "options": {},
     "_meta": {}
