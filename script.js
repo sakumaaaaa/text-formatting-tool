@@ -265,7 +265,6 @@ async function syncList(fileName, elementId) {
             if (elementId === 'presetsJson') {
                 displayContent = jsonToText(remote);
             } else {
-                // No Sort, Just Deduplicate & Filter Empty Lines (v30 Policy)
                 const lines = (remote.includes(',') && !remote.includes('\n')) ? remote.split(',').map(s=>s.trim()) : remote.split('\n').map(s=>s.trim());
                 displayContent = Array.from(new Set(lines)).filter(s=>s!=="").join('\n');
                 
@@ -298,10 +297,9 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- Core Logic Refactoring (v30.1) ---
+// --- Core Logic (v30.2 Patch) ---
 
 function getFuzzyRegExp(word) {
-    // Escapes special characters and inserts [\s\n]* between every character
     if (!word) return null;
     const chars = word.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
     const pattern = chars.join('[\\s\\n]*');
@@ -325,139 +323,13 @@ function processText() {
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // Step 1: Cleansing (Company List) - ID: companyList
-    // Role: Fix "Infi neon" -> "Infineon" WITHOUT protection.
+    // Step 1: Cleansing (Company List)
     const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     companyList.forEach(word => {
         const regex = getFuzzyRegExp(word);
         if (!regex) return;
         text = text.replace(regex, (match) => {
             if (match.includes('___P_')) return match;
-            // No protection, just fix spelling. 
-            // If strictly same, keep match to avoid unnecessary changes, but usually we want to standardize.
             return word;
         });
-    });
-
-    // Step 2: Absolute Defense (Whitelist) - ID: whitelist
-    // Role: Fix "Infi neon" -> "Infineon" AND Protect.
-    const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    whitelist.forEach((word, i) => {
-        const regex = getFuzzyRegExp(word);
-        if (!regex) return;
-        text = text.replace(regex, (match) => {
-            if (match.includes('___P_')) return match;
-            const hasNewline = match.includes('\n');
-            // If fuzzy matched (length different or newline), fix it to 'word'.
-            // If exact match, keep 'match'.
-            let resultWord = word;
-            if (match === word && !hasNewline) resultWord = word;
-            
-            // Diff logic for shield? Usually shield matches exactly, but if we fixed a ghost space, we might want to show it?
-            // "Absolute Defense" usually implies keeping the word as the user defined in the list.
-            const val = (isCompare && match !== word && match.replace(/[\s\n]+/g, '') === word) 
-                        ? (match.includes('\n') ? word : `${match}【>${word}】`) // Simplify newline diffs
-                        : word;
-            
-            const p = `___P_WL_${i}_${Math.random().toString(36).slice(-2)}___`;
-            protectedItems.push({p, val: word}); // Protect with strict word
-            return p;
-        });
-    });
-
-    // Normalize basic formatting after shields, before replacement (optional, but safer to do replace first)
-    text = text.replace(/\n/g, ''); // Flatten for replacement search if needed, or keep for paragraphs.
-    // v30 Logic was flatten newlines early.
-    
-    // Step 3: Construction (Replace)
-    let allRules = [];
-    document.getElementById('replaceList').value.split('\n').forEach(line => {
-        const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
-    });
-    
-    if (activeStyle !== 'none' && loadedPresetsData[activeStyle]) {
-        try {
-            const styleObj = loadedPresetsData[activeStyle];
-            const rules = styleObj.rules ? styleObj.rules : styleObj;
-            if (typeof rules === 'object') {
-                for (let key in rules) {
-                    key.split(',').forEach(c => {
-                        allRules = allRules.filter(r => r.from !== c.trim());
-                        allRules.push({ from: c.trim(), to: rules[key] });
-                    });
-                }
-            }
-        } catch(e) { console.error("Style apply error", e); }
     }
-    allRules.sort((a, b) => b.from.length - a.from.length);
-
-    const occurrenceMap = new Map();
-    // Extended Prefix List (Step 3 Requirement)
-    const prefixes = "(?:スイス|台湾|韓国|米国|カナダ|欧州|台|豪|米|独|仏|日|英|韓|中|伊|蘭|瑞|社)";
-    
-    allRules.forEach((rule, idx) => {
-        if (!rule.from) return;
-        
-        // Create Fuzzy Regex for the Key
-        const fuzzyKey = rule.from.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('[\\s\\n]*');
-        const regex = new RegExp(`${prefixes}*${fuzzyKey}`, 'gi');
-
-        text = text.replace(regex, (match) => {
-            if (match.includes('___P_')) return match;
-            
-            const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
-            let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
-            
-            // Self-replace logic (Infineon > Infineon to remove prefix)
-            // If match is just the word (no prefix) and target is same, skip
-            if (match === targetTo) return match;
-
-            const result = isCompare ? `${match}【>${targetTo}】` : targetTo;
-            const p = `___P_RV_${idx}_${Math.random().toString(36).slice(-2)}___`;
-            protectedItems.push({p, val: result}); return p;
-        });
-    });
-
-    // Step 4: Formatting & Symbols
-    // Standardize spacing (English/Num)
-    let prev; do { prev = text; text = text.replace(/([a-zA-Z0-9.]) +([a-zA-Z0-9.])/g, (m, p1, p2) => (p1.length === 1 || p2.length === 1) ? p1 + p2 : p1 + " " + p2); } while (prev !== text);
-    text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
-
-    const replaceSymWithDiff = (regex, target) => { text = text.replace(regex, (m) => (m.includes('___P_') || m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); };
-    replaceSymWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
-    replaceSymWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
-    replaceSymWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
-    replaceSymWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
-    replaceSymWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
-    const tOpen = config.opt_bracket === 'zen' ? '（' : '('; const tClose = config.opt_bracket === 'zen' ? '）' : ')';
-    text = text.replace(/[\(\)（）]/g, (m) => {
-        if (m.includes('___P_')) return m;
-        const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
-    });
-    if (config.opt_comma === 'comma') replaceSymWithDiff(/、/g, '，'); else replaceSymWithDiff(/，/g, '、');
-    
-    if (config.opt_mark_space !== 'keep') {
-        const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
-        text = text.replace(/([！？])([ 　]*)([^\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
-            if (match.includes('___P_') || space === markSpaceChar) return match;
-            const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
-        });
-    }
-    
-    text = text.replace(/．/g, isCompare ? '．【>.】' : '.').replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
-    text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
-
-    text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
-    for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
-    text = text.replace(/\n{3,}/g, '\n\n').trim();
-    if (hasStartSpace) text = '　' + text.replace(/^___S_Z_SP___/, '');
-
-    if (isCompare) document.getElementById('output').innerHTML = text.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
-    else document.getElementById('output').innerText = text;
-    let zenCount = 0; for (let i = 0; i < text.length; i++) {
-        const c = text.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
-    }
-    document.getElementById('charCount').innerText = `文字数: ${text.length} | 全角換算: ${Math.ceil(zenCount)}`;
-}
-
-function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
