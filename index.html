@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro (v30 Guardian)</title>
+    <title>テキスト整形くん 校閲Pro (v30.5 Polyglot)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="light-mode">
@@ -13,7 +13,7 @@
         <button id="clearBtn">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro <span style="font-size:0.6em; color:var(--accent-blue); vertical-align:middle;">v30 Plan-A</span></h1>
+    <h1>テキスト整形くん 校閲Pro <span style="font-size:0.6em; color:var(--accent-blue); vertical-align:middle;">v30.5 Polyglot</span></h1>
 
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
@@ -27,25 +27,34 @@
     <details id="listDetails" open>
         <summary>📚 各種リストの同期・管理</summary>
         <div class="details-content list-grid">
-            <!-- 1. Whitelist -->
-            <div class="list-box" style="background:var(--list-bg)">
-                <label><span>1. 保護リスト (維持)</span><span id="status_whitelist" class="list-status status-init">☁️ 未読込</span></label>
-                <input type="text" id="search_whitelist" style="padding:4px; font-size:0.8rem;" placeholder="保護語を検索..." oninput="filterList()">
-                <textarea id="whitelist" style="height: 120px;" oninput="onListInput('whitelist')"></textarea>
-                <button class="btn-sync" onclick="syncList('common_list.txt', 'whitelist')">☁️ 同期</button>
-            </div>
-            
-            <!-- 4. Company Master (New!) -->
+            <!-- 1. English/Name Master (Old Box 4) -->
             <div class="list-box" style="background:#e3f2fd; border-color:#90caf9;">
-                <label><span>4. 固有名称マスタ (Shield)</span><span id="status_companyList" class="list-status status-init">☁️ 未読込</span></label>
-                <textarea id="companyList" style="height: 145px;" oninput="onListInput('companyList')" placeholder="企業名・ブランド名を登録（保護優先）"></textarea>
+                <label title="表記ゆれを修正し、正式な英語名称に統一します。スタイル適用時は「整地」のみ、スタイルなし時は「保護」として機能します。">
+                    <span>1. 英語・名称マスタ (基本辞書)</span>
+                    <span id="status_companyList" class="list-status status-init">☁️ 未読込</span>
+                </label>
+                <textarea id="companyList" style="height: 145px;" oninput="onListInput('companyList')" placeholder="表記ゆれ・誤記 > 正式英語名称&#10;In tel > Intel"></textarea>
                 <button class="btn-sync" onclick="syncList('company_list.txt', 'companyList')">☁️ 同期</button>
             </div>
 
-            <!-- 2. Replace Master -->
+            <!-- 2. Protection List (Old Box 1) -->
+            <div class="list-box" style="background:var(--list-bg)">
+                <label title="ここに登録された語は、以降のあらゆる処理（置換・国名除去など）から完全に守られます。">
+                    <span>2. 保護ワード (絶対維持)</span>
+                    <span id="status_whitelist" class="list-status status-init">☁️ 未読込</span>
+                </label>
+                <input type="text" id="search_whitelist" style="padding:4px; font-size:0.8rem;" placeholder="保護語を検索..." oninput="filterList()">
+                <textarea id="whitelist" style="height: 120px;" oninput="onListInput('whitelist')" placeholder="ここにある語は一切変更されません"></textarea>
+                <button class="btn-sync" onclick="syncList('common_list.txt', 'whitelist')">☁️ 同期</button>
+            </div>
+            
+            <!-- 3. Replace Master (Old Box 2) -->
             <div class="list-box" style="background:var(--replace-bg)">
-                <label><span>2. 共通マスタ置換</span><span id="status_replaceList" class="list-status status-init">☁️ 未読込</span></label>
-                <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList'); checkConflicts();"></textarea>
+                <label title="一般的な用語の表記揺れを統一します。プリセットによって上書きされる基本ルールです。">
+                    <span>3. 共通置換ルール (日本語等)</span>
+                    <span id="status_replaceList" class="list-status status-init">☁️ 未読込</span>
+                </label>
+                <textarea id="replaceList" style="height: 120px;" oninput="checkUnsaved('replaceList'); checkConflicts();" placeholder="表記揺れ > 統一表記&#10;コンピューター > コンピュータ"></textarea>
                 <button class="btn-assist" onclick="suggestRules()">📋 整形結果から置換案を抽出</button>
                 <div id="assistPanel" style="display:none; background:rgba(0,0,0,0.05); padding:10px; border-radius:4px; font-size:0.8rem;">
                     <div id="assistList" style="max-height:100px; overflow-y:auto; margin-bottom:5px;"></div>
@@ -54,15 +63,18 @@
                 <button class="btn-sync" onclick="syncList('replace_list.txt', 'replaceList')">☁️ 同期</button>
             </div>
 
-            <!-- 3. Presets (Extended) -->
+            <!-- 4. Presets (Old Box 3) -->
             <div class="list-box" style="background:var(--presets-bg)">
-                <label><span>3. スタイル定義 (Rules)</span><span id="status_presetsJson" class="list-status status-init">☁️ 未読込</span></label>
-                <textarea id="presetsJson" style="height: 145px;" oninput="checkUnsaved('presetsJson')"></textarea>
+                <label title="媒体ごとのルールで最終的な仕上げ（和名化・国名付与など）を行います。">
+                    <span>4. 媒体別スタイル (仕上げ)</span>
+                    <span id="status_presetsJson" class="list-status status-init">☁️ 未読込</span>
+                </label>
+                <textarea id="presetsJson" style="height: 145px;" oninput="checkUnsaved('presetsJson')" placeholder="媒体ごとの表記ルール&#10;[大山レポート]&#10;Apple > 米Apple"></textarea>
                 <button class="btn-sync" onclick="syncList('presets.json', 'presetsJson')">☁️ 同期</button>
             </div>
         </div>
         <div id="conflictAlert" style="display:none; background:#fff3cd; color:#856404; padding:8px; margin-top:10px; border-radius:4px; font-size:0.85rem; border:1px solid #ffeeba;">
-            ⚠️ 警告: リスト間で競合が発生しています。固有名称マスタ(4)が優先されます。
+            ⚠️ 警告: リスト間で競合が発生しています。固有名称マスタ(1)や保護ワード(2)が優先されます。
         </div>
     </details>
 
