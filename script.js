@@ -24,6 +24,11 @@ window.onload = function() {
 
     if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
     
+    // Hot-Fix: Real-time update for presetsJson (Box 4)
+    document.getElementById('presetsJson').addEventListener('input', () => {
+        refreshPresetsFromUI();
+    });
+
     // Initial UI Setup
     updateStyleSelect();
 };
@@ -64,31 +69,6 @@ function checkConflicts() {
     // Overlapping between Protection(Box1,2) and Replacement(Box3,4) is valid behavior.
     const alertBox = document.getElementById('conflictAlert');
     if(alertBox) alertBox.style.display = 'none';
-
-    /* Logic preserved for future reference or debug mode:
-    const wLines = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    const cLines = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    const rLines = document.getElementById('replaceList').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    
-    const protectedSet = new Set(wLines);
-    cLines.forEach(line => {
-        if (line.includes('>')) {
-            const parts = line.split('>');
-            parts[1].split('|').forEach(t => protectedSet.add(t.trim()));
-            parts[0].split(',').forEach(s => protectedSet.add(s.trim()));
-        } else {
-            protectedSet.add(line);
-        }
-    });
-
-    let conflict = false;
-    rLines.forEach(line => {
-        const key = line.split('>')[0].split(',')[0].trim();
-        if (protectedSet.has(key)) conflict = true;
-    });
-
-    alertBox.style.display = conflict ? 'block' : 'none';
-    */
 }
 
 function filterList() {
@@ -170,6 +150,19 @@ function textToJson(text) {
     return JSON.stringify(finalObj, null, 2);
 }
 
+// Hot-Fix: Parse UI text and update memory immediately
+function refreshPresetsFromUI() {
+    const text = document.getElementById('presetsJson').value;
+    try {
+        // textToJson returns a JSON string merging current memory with UI text
+        const jsonStr = textToJson(text);
+        loadedPresetsData = JSON.parse(jsonStr);
+        updateStyleSelect();
+    } catch(e) {
+        console.error("Hot-reload error:", e);
+    }
+}
+
 function updateStyleSelect(dataObj) {
     const select = document.getElementById('activeStyle');
     const currentVal = select.value;
@@ -240,7 +233,8 @@ function saveCurrentStyleAsNew() {
     checkUnsaved('presetsJson');
     updateStyleSelect();
     document.getElementById('activeStyle').value = name;
-    alert(`スタイル "${name}" を保存しました。\n[3. スタイル定義] の同期ボタンでクラウドに保存してください。`);
+    // Hot-Fix: Corrected message from "3. スタイル定義" to "4. 媒体別スタイル"
+    alert(`スタイル "${name}" を保存しました。\n[4. 媒体別スタイル] の同期ボタンでクラウドに保存してください。`);
 }
 
 // --- Sync & Suggest Logic ---
