@@ -1,4 +1,4 @@
-// v30.6 Guardian Script (Fixed: Sync Logic & Status)
+// v30.6 Guardian Script (Fixed: Sync Trigger Logic)
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
 let masterWhitelist = []; 
@@ -50,7 +50,7 @@ function copyToClipboard() { const text = document.getElementById('output').inne
 function checkUnsaved(id) {
     const status = document.getElementById('status_' + id);
     
-    // Fix: Priority check for explicit NULL (Force Unsaved)
+    // Priority check for explicit NULL (Force Unsaved)
     if (lastSynced[id] === null) {
         status.innerText = "⚠️ 未共有"; 
         status.className = "list-status status-unsaved";
@@ -86,7 +86,7 @@ function filterList() {
 
 // --- JSON & Style Management ---
 
-// Fix: Added updateGlobal flag to prevent side effects during sync comparison
+// updateGlobal flag to prevent side effects during sync comparison
 function jsonToText(jsonStr, updateGlobal = true) {
     try {
         const obj = JSON.parse(jsonStr);
@@ -307,7 +307,7 @@ function applySuggestions() {
     document.getElementById('assistPanel').style.display = 'none'; checkUnsaved('replaceList');
 }
 
-// Fix: Sync Logic to prevent option data loss
+// Fix: Sync Logic with proper Save Trigger
 async function syncList(fileName, elementId) {
     const token = document.getElementById('githubToken').value;
     const user = document.getElementById('githubUser').value;
@@ -320,7 +320,7 @@ async function syncList(fileName, elementId) {
         if (res.ok) {
             const data = await res.json();
             let remoteJsonRaw = decodeURIComponent(escape(atob(data.content))); // Raw JSON string
-            let displayContent = remoteJsonRaw; // Default for normal lists
+            let displayContent = remoteJsonRaw; 
             
             if (elementId === 'presetsJson') {
                 // PARSE REMOTE WITHOUT TOUCHING GLOBAL MEMORY
@@ -332,15 +332,16 @@ async function syncList(fileName, elementId) {
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
             }
 
-            if (textArea.value.trim() !== "" && textArea.value.trim() !== displayContent.trim()) {
+            // Fix: Check for Force Unsaved flag (lastSynced === null)
+            if (textArea.value.trim() !== "" && (textArea.value.trim() !== displayContent.trim() || lastSynced[elementId] === null)) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
-                    let finalToSave = textArea.value; // For normal lists
-                    let finalJsonStr = textArea.value; // For JSON
+                    let finalToSave = textArea.value; 
+                    let finalJsonStr = textArea.value; 
                     
                     if (elementId === 'presetsJson') {
                         // MERGE: INI Text + Current Global Memory Options -> New JSON String
                         finalJsonStr = textToJson(textArea.value);
-                        finalToSave = finalJsonStr; // Use JSON string for payload
+                        finalToSave = finalJsonStr; 
                     }
                     
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
@@ -357,7 +358,7 @@ async function syncList(fileName, elementId) {
             textArea.value = displayContent; 
             lastSynced[elementId] = displayContent; 
             
-            // Ensure global memory matches the synced data (either what we saved or what we pulled)
+            // Ensure global memory matches the synced data
             if(elementId === 'presetsJson') {
                 jsonToText(remoteJsonRaw, true);
             }
