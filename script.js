@@ -1,8 +1,9 @@
-const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_comma','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
+// v30.6 Guardian Script (Updated)
+const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
 let masterWhitelist = []; 
 let masterCompanyList = []; 
-let loadedPresetsData = {}; // Full JSON object in memory (Rules + Options + Meta)
+let loadedPresetsData = {}; 
 let currentSuggestions = [];
 
 window.onload = function() {
@@ -10,7 +11,7 @@ window.onload = function() {
     if(localStorage.getItem('gh_user')) document.getElementById('githubUser').value = localStorage.getItem('gh_user');
     if(localStorage.getItem('gh_repo')) document.getElementById('githubRepo').value = localStorage.getItem('gh_repo');
     
-    // Restore local option settings first
+    // Restore local option settings
     OPT_KEYS.forEach(id => {
         const val = localStorage.getItem(id); 
         if(val) document.getElementById(id).value = val;
@@ -19,17 +20,14 @@ window.onload = function() {
         });
     });
     
-    // Fix: Dark Mode Event Binding (v30.6)
     document.getElementById('modeBtn').addEventListener('click', toggleDarkMode);
-
     if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
     
-    // Hot-Fix: Real-time update for presetsJson (Box 4)
+    // Hot-Fix: Real-time update for presetsJson
     document.getElementById('presetsJson').addEventListener('input', () => {
         refreshPresetsFromUI();
     });
 
-    // Initial UI Setup
     updateStyleSelect();
 };
 
@@ -65,8 +63,6 @@ function onListInput(id) {
 }
 
 function checkConflicts() {
-    // v30.6 Fix: Disable conflict warning to reduce noise.
-    // Overlapping between Protection(Box1,2) and Replacement(Box3,4) is valid behavior.
     const alertBox = document.getElementById('conflictAlert');
     if(alertBox) alertBox.style.display = 'none';
 }
@@ -150,11 +146,9 @@ function textToJson(text) {
     return JSON.stringify(finalObj, null, 2);
 }
 
-// Hot-Fix: Parse UI text and update memory immediately
 function refreshPresetsFromUI() {
     const text = document.getElementById('presetsJson').value;
     try {
-        // textToJson returns a JSON string merging current memory with UI text
         const jsonStr = textToJson(text);
         loadedPresetsData = JSON.parse(jsonStr);
         updateStyleSelect();
@@ -165,6 +159,7 @@ function refreshPresetsFromUI() {
 
 function updateStyleSelect(dataObj) {
     const select = document.getElementById('activeStyle');
+    const btnUpdate = document.getElementById('btnUpdateStyle');
     const currentVal = select.value;
     const data = dataObj || loadedPresetsData;
     
@@ -182,10 +177,29 @@ function updateStyleSelect(dataObj) {
     if (Object.keys(data).includes(currentVal)) {
         select.value = currentVal;
     }
+    
+    // Update Button State
+    if (select.value === 'none') {
+        btnUpdate.disabled = true;
+        btnUpdate.innerText = "🔄 選択されていません";
+    } else {
+        btnUpdate.disabled = false;
+        btnUpdate.innerText = `🔄 [${select.value}] を更新`;
+    }
 }
 
 function applyStyle(styleName) {
     const infoSpan = document.getElementById('styleInfo');
+    // Update button text immediately when style changes
+    const btnUpdate = document.getElementById('btnUpdateStyle');
+    if (styleName === 'none') {
+        btnUpdate.disabled = true;
+        btnUpdate.innerText = "🔄 選択されていません";
+    } else {
+        btnUpdate.disabled = false;
+        btnUpdate.innerText = `🔄 [${styleName}] を更新`;
+    }
+
     if (styleName === 'none' || !loadedPresetsData[styleName]) {
         infoSpan.innerText = "";
         return;
@@ -208,33 +222,58 @@ function applyStyle(styleName) {
     }
 }
 
-function saveCurrentStyleAsNew() {
-    const name = document.getElementById('newStyleName').value.trim();
-    if (!name) { alert("スタイル名を入力してください"); return; }
-    if (loadedPresetsData[name] && !confirm(`スタイル "${name}" は既に存在します。上書きしますか？`)) return;
+// --- New Style Management Functions ---
 
+function getCurrentOptions() {
     const currentOptions = {};
     OPT_KEYS.forEach(k => {
-        currentOptions[k] = document.getElementById(k).value;
+        const el = document.getElementById(k);
+        if(el) currentOptions[k] = el.value;
     });
+    return currentOptions;
+}
 
-    if (!loadedPresetsData[name]) {
-        loadedPresetsData[name] = { rules: {}, options: {}, _meta: { created: new Date().toISOString() } };
-    }
-    
-    loadedPresetsData[name].options = currentOptions;
-    
+function updateCurrentStyle() {
+    const name = document.getElementById('activeStyle').value;
+    if (name === 'none' || !loadedPresetsData[name]) return;
+
+    loadedPresetsData[name].options = getCurrentOptions();
+    loadedPresetsData[name]._meta.updated = new Date().toISOString();
+
     const textArea = document.getElementById('presetsJson');
-    if (!textArea.value.includes(`[${name}]`)) {
-        textArea.value += `\n[${name}]\n`;
-    }
-
-    document.getElementById('presetsJson').value = jsonToText(JSON.stringify(loadedPresetsData));
+    textArea.value = jsonToText(JSON.stringify(loadedPresetsData));
+    
+    // Force unsaved status
+    lastSynced['presetsJson'] = null;
     checkUnsaved('presetsJson');
+    
+    alert(`スタイル "${name}" のオプション設定を更新しました。\n[4. 媒体別スタイル] の同期ボタンでクラウドに保存してください。`);
+}
+
+function createNewStyle() {
+    const name = document.getElementById('newStyleName').value.trim();
+    if (!name) { alert("スタイル名を入力してください"); return; }
+    if (loadedPresetsData[name]) { alert(`スタイル "${name}" は既に存在します。更新ボタンを使用してください。`); return; }
+
+    loadedPresetsData[name] = { 
+        rules: {}, 
+        options: getCurrentOptions(), 
+        _meta: { created: new Date().toISOString() } 
+    };
+
+    const textArea = document.getElementById('presetsJson');
+    textArea.value += `\n[${name}]\n`; // Appending to UI
+    textArea.value = jsonToText(JSON.stringify(loadedPresetsData)); // Formatting
+
+    // Force unsaved status
+    lastSynced['presetsJson'] = null;
+    checkUnsaved('presetsJson');
+    
     updateStyleSelect();
     document.getElementById('activeStyle').value = name;
-    // Hot-Fix: Corrected message from "3. スタイル定義" to "4. 媒体別スタイル"
-    alert(`スタイル "${name}" を保存しました。\n[4. 媒体別スタイル] の同期ボタンでクラウドに保存してください。`);
+    applyStyle(name); // Refresh UI logic
+    
+    alert(`新規スタイル "${name}" を作成しました。\n[4. 媒体別スタイル] の同期ボタンでクラウドに保存してください。`);
 }
 
 // --- Sync & Suggest Logic ---
@@ -311,7 +350,7 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- Core Logic (v30.5 Logic Branching) ---
+// --- Core Logic ---
 
 function getFuzzyRegExp(word) {
     if (!word) return null;
@@ -337,34 +376,24 @@ function processText() {
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // Step 1: Company List (Behavior varies by Style)
-    // ID: companyList
+    // Step 1: Company List
     const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     companyList.forEach(line => {
         let targets = [];
         let replacement = "";
-        let shouldProtect = false; // For Case B
+        let shouldProtect = false;
 
         if (line.includes('>')) {
             const parts = line.split('>');
             replacement = parts[1].trim();
-            
             if (activeStyle === 'none') {
-                // Case B: No Style. Ignore Left. Use Right as Shield.
-                targets = [replacement];
-                shouldProtect = true;
+                targets = [replacement]; shouldProtect = true;
             } else {
-                // Case A: Style Active. Use Left as Source. Cleansing only (No Protection).
                 targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
-                // Also include self-repair for the replacement itself
                 targets.push(replacement);
-                shouldProtect = false;
             }
         } else {
-            // TargetOnly. Always self-repair.
-            replacement = line;
-            targets = [line];
-            // If No Style, we protect this word to keep its spaces.
+            replacement = line; targets = [line];
             if (activeStyle === 'none') shouldProtect = true;
         }
 
@@ -373,21 +402,17 @@ function processText() {
             if (!regex) return;
             text = text.replace(regex, (match) => {
                 if (match.includes('___P_')) return match;
-                
-                // If protecting (Case B), we capsule it.
                 if (shouldProtect) {
                     const p = `___P_WL_CMP_${Math.random().toString(36).slice(-2)}___`;
                     protectedItems.push({p, val: replacement});
                     return p;
                 }
-                
-                // Else just cleansing (Case A)
                 return replacement;
             });
         });
     });
 
-    // Step 2: Absolute Defense (Whitelist)
+    // Step 2: Whitelist
     const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
     whitelist.forEach((word, i) => {
         const regex = getFuzzyRegExp(word);
@@ -397,11 +422,8 @@ function processText() {
             const hasNewline = match.includes('\n');
             let resultWord = word;
             if (match === word && !hasNewline) resultWord = word;
-            
             const val = (isCompare && match !== word && match.replace(/[\s\n]+/g, '') === word) 
-                        ? (match.includes('\n') ? word : `${match}【>${word}】`) 
-                        : word;
-            
+                        ? (match.includes('\n') ? word : `${match}【>${word}】`) : word;
             const p = `___P_WL_${i}_${Math.random().toString(36).slice(-2)}___`;
             protectedItems.push({p, val: word}); 
             return p;
@@ -410,7 +432,7 @@ function processText() {
 
     text = text.replace(/\n/g, ''); 
     
-    // Step 3: Construction (Replace)
+    // Step 3: Replace
     let allRules = [];
     document.getElementById('replaceList').value.split('\n').forEach(line => {
         const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
@@ -433,26 +455,17 @@ function processText() {
     allRules.sort((a, b) => b.from.length - a.from.length);
 
     const occurrenceMap = new Map();
-    // v30.3 Policy: Strict Prefix
-    let prefixPattern = "";
-    if (activeStyle !== 'none') {
-        prefixPattern = "[台豪米独仏日英韓中]*"; 
-    }
+    let prefixPattern = (activeStyle !== 'none') ? "[台豪米独仏日英韓中]*" : "";
     
     allRules.forEach((rule, idx) => {
         if (!rule.from) return;
-        
         const fuzzyKey = rule.from.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('[\\s\\n]*');
         const regex = new RegExp(`${prefixPattern}${fuzzyKey}`, 'gi');
-
         text = text.replace(regex, (match) => {
             if (match.includes('___P_')) return match;
-            
             const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
             let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
-            
             if (match === targetTo) return match;
-
             const result = isCompare ? `${match}【>${targetTo}】` : targetTo;
             const p = `___P_RV_${idx}_${Math.random().toString(36).slice(-2)}___`;
             protectedItems.push({p, val: result}); return p;
@@ -473,7 +486,22 @@ function processText() {
         if (m.includes('___P_')) return m;
         const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
     });
-    if (config.opt_comma === 'comma') replaceSymWithDiff(/、/g, '，'); else replaceSymWithDiff(/，/g, '、');
+
+    // Updated Punctuation Logic (v30.6)
+    if (config.opt_punctuation === 'ten_maru') {
+        // テン・マル (、。) -> Convert commas to 、 and dots to 。
+        replaceSymWithDiff(/[，,]/g, '、');
+        replaceSymWithDiff(/[．\.]/g, '。');
+    } else if (config.opt_punctuation === 'comma_maru') {
+        // カンマ・マル (，。) -> Convert tens to ， and dots to 。
+        replaceSymWithDiff(/、/g, '，');
+        replaceSymWithDiff(/[．\.]/g, '。');
+    } else if (config.opt_punctuation === 'comma_period') {
+        // カンマ・ピリ (，．) -> Convert tens to ， and marus to ．
+        replaceSymWithDiff(/、/g, '，');
+        replaceSymWithDiff(/[。]/g, '．'); // Full-width dot
+        replaceSymWithDiff(/\./g, '．'); // Half-width dot to Full-width
+    }
     
     if (config.opt_mark_space !== 'keep') {
         const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
@@ -483,7 +511,7 @@ function processText() {
         });
     }
     
-    text = text.replace(/．/g, isCompare ? '．【>.】' : '.').replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
+    text = text.replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
     text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
 
     text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
