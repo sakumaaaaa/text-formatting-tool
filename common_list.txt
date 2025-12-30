@@ -1,8 +1,5 @@
 Advanced Driver Assistance Systems
-Advanced Micro Devices
-Analog Devices
 Apple Intelligence
-Applied Materials
 Bob Swan
 DDR5 SDRAM
 Double Data Rate 5 Synchronous DRAM
@@ -13,34 +10,20 @@ GaN HEMT
 Gate All Around
 Graphics Processing Unit
 High Bandwidth Memory
-Infineon Technologies
 International Data Corp.
 Internet of Things
 JEDEC Solid State Technology Association
 Jensen Huang
-Meta Platforms
-Micron Technology
-NXP Semiconductors
-OmniVision Technologies
 Original Design Manufacturing
 Power MOSFET
-Robert Bosch
-Samsung Electronics
-SK hynix
 Solid State Drive
-STMicroelectronics
 System on a Chip
-Texas Instruments
 United States Steel
-Western Digital
 Windows 10
 Windows 11
 Windows 8
-Wingtech Technology
 スマートフォン（スマホ）
-ルネサス エレクトロニクス
 レガシー
-Taiwan Semiconductor Manufacturing Company
 ニュー台湾ドル
 豪ドル
 米ドル
