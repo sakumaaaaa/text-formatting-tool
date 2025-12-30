@@ -1,4 +1,4 @@
-// v30.6 Guardian Script (Updated)
+// v30.6 Guardian Script (Fixed: Sync Logic & Status)
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
 let masterWhitelist = []; 
@@ -48,8 +48,18 @@ function toggleDarkMode() {
 function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
 
 function checkUnsaved(id) {
-    const current = document.getElementById(id).value.trim(); const last = (lastSynced[id] || "").trim();
     const status = document.getElementById('status_' + id);
+    
+    // Fix: Priority check for explicit NULL (Force Unsaved)
+    if (lastSynced[id] === null) {
+        status.innerText = "⚠️ 未共有"; 
+        status.className = "list-status status-unsaved";
+        return;
+    }
+
+    const current = document.getElementById(id).value.trim(); 
+    const last = (lastSynced[id] || "").trim();
+    
     if (last === "") { status.innerText = "☁️ 未読込"; status.className = "list-status status-init"; }
     else if (current !== last) { status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; }
     else { status.innerText = "✅ 最新"; status.className = "list-status status-sync"; }
@@ -76,10 +86,11 @@ function filterList() {
 
 // --- JSON & Style Management ---
 
-function jsonToText(jsonStr) {
+// Fix: Added updateGlobal flag to prevent side effects during sync comparison
+function jsonToText(jsonStr, updateGlobal = true) {
     try {
         const obj = JSON.parse(jsonStr);
-        loadedPresetsData = obj; 
+        if (updateGlobal) loadedPresetsData = obj; 
         
         let text = "";
         for (let style in obj) {
@@ -92,7 +103,7 @@ function jsonToText(jsonStr) {
             }
             text += "\n";
         }
-        updateStyleSelect(obj);
+        if (updateGlobal) updateStyleSelect(obj);
         return text.trim();
     } catch(e) { console.error(e); return jsonStr; }
 }
@@ -180,24 +191,19 @@ function updateStyleSelect(dataObj) {
     
     // Update Button State
     if (select.value === 'none') {
-        btnUpdate.disabled = true;
-        btnUpdate.innerText = "🔄 選択されていません";
+        if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
     } else {
-        btnUpdate.disabled = false;
-        btnUpdate.innerText = `🔄 [${select.value}] を更新`;
+        if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${select.value}] を更新`; }
     }
 }
 
 function applyStyle(styleName) {
     const infoSpan = document.getElementById('styleInfo');
-    // Update button text immediately when style changes
     const btnUpdate = document.getElementById('btnUpdateStyle');
     if (styleName === 'none') {
-        btnUpdate.disabled = true;
-        btnUpdate.innerText = "🔄 選択されていません";
+        if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
     } else {
-        btnUpdate.disabled = false;
-        btnUpdate.innerText = `🔄 [${styleName}] を更新`;
+        if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${styleName}] を更新`; }
     }
 
     if (styleName === 'none' || !loadedPresetsData[styleName]) {
@@ -262,8 +268,8 @@ function createNewStyle() {
     };
 
     const textArea = document.getElementById('presetsJson');
-    textArea.value += `\n[${name}]\n`; // Appending to UI
-    textArea.value = jsonToText(JSON.stringify(loadedPresetsData)); // Formatting
+    textArea.value += `\n[${name}]\n`; 
+    textArea.value = jsonToText(JSON.stringify(loadedPresetsData));
 
     // Force unsaved status
     lastSynced['presetsJson'] = null;
@@ -271,7 +277,7 @@ function createNewStyle() {
     
     updateStyleSelect();
     document.getElementById('activeStyle').value = name;
-    applyStyle(name); // Refresh UI logic
+    applyStyle(name); 
     
     alert(`新規スタイル "${name}" を作成しました。\n[4. 媒体別スタイル] の同期ボタンでクラウドに保存してください。`);
 }
@@ -301,6 +307,7 @@ function applySuggestions() {
     document.getElementById('assistPanel').style.display = 'none'; checkUnsaved('replaceList');
 }
 
+// Fix: Sync Logic to prevent option data loss
 async function syncList(fileName, elementId) {
     const token = document.getElementById('githubToken').value;
     const user = document.getElementById('githubUser').value;
@@ -312,31 +319,51 @@ async function syncList(fileName, elementId) {
         const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
         if (res.ok) {
             const data = await res.json();
-            let remote = decodeURIComponent(escape(atob(data.content)));
-            let displayContent = remote;
+            let remoteJsonRaw = decodeURIComponent(escape(atob(data.content))); // Raw JSON string
+            let displayContent = remoteJsonRaw; // Default for normal lists
             
             if (elementId === 'presetsJson') {
-                displayContent = jsonToText(remote);
+                // PARSE REMOTE WITHOUT TOUCHING GLOBAL MEMORY
+                displayContent = jsonToText(remoteJsonRaw, false);
             } else {
-                const lines = (remote.includes(',') && !remote.includes('\n')) ? remote.split(',').map(s=>s.trim()) : remote.split('\n').map(s=>s.trim());
+                const lines = (remoteJsonRaw.includes(',') && !remoteJsonRaw.includes('\n')) ? remoteJsonRaw.split(',').map(s=>s.trim()) : remoteJsonRaw.split('\n').map(s=>s.trim());
                 displayContent = Array.from(new Set(lines)).filter(s=>s!=="").join('\n');
-                
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
             }
 
             if (textArea.value.trim() !== "" && textArea.value.trim() !== displayContent.trim()) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
-                    let finalToSave = textArea.value;
-                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value);
+                    let finalToSave = textArea.value; // For normal lists
+                    let finalJsonStr = textArea.value; // For JSON
+                    
+                    if (elementId === 'presetsJson') {
+                        // MERGE: INI Text + Current Global Memory Options -> New JSON String
+                        finalJsonStr = textToJson(textArea.value);
+                        finalToSave = finalJsonStr; // Use JSON string for payload
+                    }
                     
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
-                    alert("保存完了"); displayContent = textArea.value; 
-                    if (elementId === 'presetsJson') jsonToText(finalToSave);
+                    alert("保存完了"); 
+                    
+                    // Update Synced Data References
+                    displayContent = textArea.value; 
+                    if (elementId === 'presetsJson') remoteJsonRaw = finalJsonStr;
                 }
             }
-            textArea.value = displayContent; lastSynced[elementId] = displayContent; checkUnsaved(elementId); alert("同期完了");
+            
+            // Sync Finished: Update UI and Global Memory
+            textArea.value = displayContent; 
+            lastSynced[elementId] = displayContent; 
+            
+            // Ensure global memory matches the synced data (either what we saved or what we pulled)
+            if(elementId === 'presetsJson') {
+                jsonToText(remoteJsonRaw, true);
+            }
+
+            checkUnsaved(elementId); 
+            alert("同期完了");
             if(elementId !== 'presetsJson') checkConflicts();
         } else if(res.status === 404) {
              if(confirm(`ファイル ${fileName} が見つかりません。新規作成しますか？`)) {
@@ -489,18 +516,15 @@ function processText() {
 
     // Updated Punctuation Logic (v30.6)
     if (config.opt_punctuation === 'ten_maru') {
-        // テン・マル (、。) -> Convert commas to 、 and dots to 。
         replaceSymWithDiff(/[，,]/g, '、');
         replaceSymWithDiff(/[．\.]/g, '。');
     } else if (config.opt_punctuation === 'comma_maru') {
-        // カンマ・マル (，。) -> Convert tens to ， and dots to 。
         replaceSymWithDiff(/、/g, '，');
         replaceSymWithDiff(/[．\.]/g, '。');
     } else if (config.opt_punctuation === 'comma_period') {
-        // カンマ・ピリ (，．) -> Convert tens to ， and marus to ．
         replaceSymWithDiff(/、/g, '，');
-        replaceSymWithDiff(/[。]/g, '．'); // Full-width dot
-        replaceSymWithDiff(/\./g, '．'); // Half-width dot to Full-width
+        replaceSymWithDiff(/[。]/g, '．'); 
+        replaceSymWithDiff(/\./g, '．'); 
     }
     
     if (config.opt_mark_space !== 'keep') {
