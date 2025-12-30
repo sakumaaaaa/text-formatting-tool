@@ -57,14 +57,28 @@ function onListInput(id) {
 }
 
 function checkConflicts() {
-    const w = new Set(document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s));
-    const c = new Set(document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s));
+    const wLines = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
+    const cLines = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     const rLines = document.getElementById('replaceList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     
+    const protectedSet = new Set(wLines);
+    
+    // v30.4: Parse Company List (support "Source > Target")
+    cLines.forEach(line => {
+        if (line.includes('>')) {
+            const parts = line.split('>');
+            const target = parts[1].trim();
+            protectedSet.add(target);
+            parts[0].split(',').forEach(s => protectedSet.add(s.trim()));
+        } else {
+            protectedSet.add(line);
+        }
+    });
+
     let conflict = false;
     rLines.forEach(line => {
         const key = line.split('>')[0].split(',')[0].trim();
-        if (w.has(key) || c.has(key)) conflict = true;
+        if (protectedSet.has(key)) conflict = true;
     });
 
     const alertBox = document.getElementById('conflictAlert');
@@ -297,7 +311,7 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- Core Logic (v30.3 Strict Prefix) ---
+// --- Core Logic (v30.4 Polyglot) ---
 
 function getFuzzyRegExp(word) {
     if (!word) return null;
@@ -324,13 +338,31 @@ function processText() {
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
     // Step 1: Cleansing (Company List)
+    // v30.4: Parse line for "Source > Target" pattern
     const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    companyList.forEach(word => {
-        const regex = getFuzzyRegExp(word);
-        if (!regex) return;
-        text = text.replace(regex, (match) => {
-            if (match.includes('___P_')) return match;
-            return word;
+    companyList.forEach(line => {
+        let targets = [];
+        let replacement = "";
+
+        if (line.includes('>')) {
+            // Pattern A: Source > Target
+            const parts = line.split('>');
+            replacement = parts[1].trim();
+            targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
+        } else {
+            // Pattern B: TargetOnly (Self-repair)
+            replacement = line;
+            targets = [line];
+        }
+
+        targets.forEach(src => {
+            const regex = getFuzzyRegExp(src);
+            if (!regex) return;
+            text = text.replace(regex, (match) => {
+                if (match.includes('___P_')) return match;
+                // v30.1 Policy: Cleansing only, NO Protection
+                return replacement;
+            });
         });
     });
 
@@ -380,7 +412,7 @@ function processText() {
     allRules.sort((a, b) => b.from.length - a.from.length);
 
     const occurrenceMap = new Map();
-    // v30.3 Change: Revert to strict single-character list. Multi-char prefixes (e.g. Europe) are dangerous.
+    // v30.3 Policy: Strict Prefix
     let prefixPattern = "";
     if (activeStyle !== 'none') {
         prefixPattern = "[台豪米独仏日英韓中]*"; 
