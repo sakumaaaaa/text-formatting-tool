@@ -1,35 +1,34 @@
+; === 企業名正規化（自己置換による保護を含む） ===
 ; === 既存ルール ===
+; その後に略称やカナからの正規化
+; 先に長い正式名称を定義（マッチさせて維持、または国名除去）
+Advanced Micro Devices > Advanced Micro Devices
+AMD > Advanced Micro Devices
+DuPont > DuPont
+Infineon Technologies > Infineon Technologies
+Samsung Electronics > Samsung Electronics
+STMicroelectronics > STMicroelectronics
+STマイクロ, STマイクロエレクトロニクス > STMicroelectronics
+Taiwan Semiconductor Manufacturing Company > Taiwan Semiconductor Manufacturing Company
+Texas Instruments > Texas Instruments
+TI, テキサス・インスツルメンツ > Texas Instruments
+TSMC > Taiwan Semiconductor Manufacturing Company
 アクチュエーター, アクチュエータ > アクチュエータ
+アップル, Apple > Apple
+インフィニオン, Infineon > Infineon Technologies
 ウェハ, ウェハー, ウエハー, ウェーハ, ウエーハ > ウエハ
 コンピューター > コンピュータ
 サーバー, サーバ, サバー > サーバ
+サムスン電子, サムスン > Samsung Electronics
 センサー, センサ > センサ
 データセンター, データセンタ > データセンタ
 デジカメ > デジタルカメラ
-米ドル, ドル > 米ドル
+デュポン > DuPont
 プロセッサー, プロセッサ > プロセッサ
 メーカー, メーカ > メーカ
 メモリー, メモリ > メモリ
 携帯電話 > 携帯電話【〓デバイスの場合は携帯電話機〓】
 大山聡 > 大山 聡
+米ドル, ドル > 米ドル
 明暗が分かれ > 明暗が別れ
-
-; === 企業名正規化（自己置換による保護を含む） ===
-; 先に長い正式名称を定義（マッチさせて維持、または国名除去）
-Infineon Technologies > Infineon Technologies
-Samsung Electronics > Samsung Electronics
-Advanced Micro Devices > Advanced Micro Devices
-Taiwan Semiconductor Manufacturing Company > Taiwan Semiconductor Manufacturing Company
-Texas Instruments > Texas Instruments
-STMicroelectronics > STMicroelectronics
-DuPont > DuPont
-
-; その後に略称やカナからの正規化
-アップル, Apple > Apple
-インフィニオン, Infineon > Infineon Technologies
-デュポン > DuPont
-サムスン電子, サムスン > Samsung Electronics
-TSMC > Taiwan Semiconductor Manufacturing Company
-AMD > Advanced Micro Devices
-TI, テキサス・インスツルメンツ > Texas Instruments
-STマイクロ, STマイクロエレクトロニクス > STMicroelectronics
+テストだよ！ > テストだよ！！
