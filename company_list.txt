@@ -1,8 +1,8 @@
 lntel, 米Intel, Intl > Intel
-TaiwanSemiconductorManufacturingCompany, TSMC, 台湾TSMC, TMSC > Taiwan Semiconductor Manufacturing Company
-AdvancedMicroDevices, AMD, 米AMD > Advanced Micro Devices
+Taiwan Semiconductor Manufacturing Company, TSMC, 台湾TSMC, TMSC > Taiwan Semiconductor Manufacturing Company
+Advanced Micro Devices, AMD, 米AMD > Advanced Micro Devices
 Aplle, 米Apple, Apple > Apple
-独InfineonTechnologies, 独InfineonTechnologyes, InfineonTechnologies, InfineonTechnologyes, Infineon, 独Infineon > Infineon Technologies
-独DuPont, DuPont, DuPont > DuPont
-韓国SamsungElectronics, SamsungElectronics, Samsung, 韓Samsung > Samsung Electronics
-米TexasInstruments, TexasInstruments, TI, 米TI > Texas Instruments
+Infineon Technologies, Infineon Technologyes, Infineon, 独Infineon > Infineon Technologies
+DuPont, 独DuPont, Du Pont > DuPont
+Samsung Electronics, Samsung, 韓Samsung > Samsung Electronics
+Texas Instruments, TI, 米TI > Texas Instruments
