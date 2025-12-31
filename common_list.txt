@@ -28,3 +28,4 @@ Windows 8
 豪ドル
 米ドル
 Infineon Technologies
+Advanced Micro Devices
