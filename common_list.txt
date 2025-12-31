@@ -23,5 +23,4 @@ Windows 10
 Windows 11
 Windows 8
 Infineon Technologies
-Advanced Micro Devices
 Taiwan Semiconductor Manufacturing Company
