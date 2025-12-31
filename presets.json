@@ -7,7 +7,7 @@
     },
     "options": {
       "opt_percent": "han",
-      "opt_ampersand": "zen",
+      "opt_ampersand": "han",
       "opt_bracket": "zen",
       "opt_colon": "zen",
       "opt_punctuation": "comma_maru",
@@ -20,7 +20,7 @@
       "opt_mark_space": "force"
     },
     "_meta": {
-      "updated": "2025-12-31T00:56:46.261Z"
+      "updated": "2025-12-31T00:57:44.141Z"
     }
   },
   "大山レポート": {
