@@ -1,5 +1,6 @@
-// v30.6 Guardian Script (Fixed: Sync Trigger Logic)
-const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
+// v30.7 Guardian Script
+// Added 'opt_wave' to keys
+const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_wave','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
 let masterWhitelist = []; 
 let masterCompanyList = []; 
@@ -29,6 +30,9 @@ window.onload = function() {
     });
 
     updateStyleSelect();
+    
+    // Initial apply for UI state (enable/disable options based on default 'none')
+    applyStyle(document.getElementById('activeStyle').value);
 };
 
 function saveSettings() {
@@ -86,7 +90,6 @@ function filterList() {
 
 // --- JSON & Style Management ---
 
-// updateGlobal flag to prevent side effects during sync comparison
 function jsonToText(jsonStr, updateGlobal = true) {
     try {
         const obj = JSON.parse(jsonStr);
@@ -174,7 +177,7 @@ function updateStyleSelect(dataObj) {
     const currentVal = select.value;
     const data = dataObj || loadedPresetsData;
     
-    select.innerHTML = '<option value="none">なし (整形のみ)</option>';
+    select.innerHTML = '<option value="none">なし (単純整形のみ)</option>';
     
     if (!data) return;
     
@@ -200,13 +203,24 @@ function updateStyleSelect(dataObj) {
 function applyStyle(styleName) {
     const infoSpan = document.getElementById('styleInfo');
     const btnUpdate = document.getElementById('btnUpdateStyle');
-    if (styleName === 'none') {
+    const isNone = styleName === 'none';
+
+    // v30.7 Spec: Disable all options when 'none'
+    OPT_KEYS.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.disabled = isNone;
+            el.style.opacity = isNone ? "0.5" : "1";
+        }
+    });
+
+    if (isNone) {
         if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
     } else {
         if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${styleName}] を更新`; }
     }
 
-    if (styleName === 'none' || !loadedPresetsData[styleName]) {
+    if (isNone || !loadedPresetsData[styleName]) {
         infoSpan.innerText = "";
         return;
     }
@@ -307,7 +321,6 @@ function applySuggestions() {
     document.getElementById('assistPanel').style.display = 'none'; checkUnsaved('replaceList');
 }
 
-// Fix: Sync Logic with proper Save Trigger
 async function syncList(fileName, elementId) {
     const token = document.getElementById('githubToken').value;
     const user = document.getElementById('githubUser').value;
@@ -323,7 +336,6 @@ async function syncList(fileName, elementId) {
             let displayContent = remoteJsonRaw; 
             
             if (elementId === 'presetsJson') {
-                // PARSE REMOTE WITHOUT TOUCHING GLOBAL MEMORY
                 displayContent = jsonToText(remoteJsonRaw, false);
             } else {
                 const lines = (remoteJsonRaw.includes(',') && !remoteJsonRaw.includes('\n')) ? remoteJsonRaw.split(',').map(s=>s.trim()) : remoteJsonRaw.split('\n').map(s=>s.trim());
@@ -332,14 +344,12 @@ async function syncList(fileName, elementId) {
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
             }
 
-            // Fix: Check for Force Unsaved flag (lastSynced === null)
             if (textArea.value.trim() !== "" && (textArea.value.trim() !== displayContent.trim() || lastSynced[elementId] === null)) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
                     let finalToSave = textArea.value; 
                     let finalJsonStr = textArea.value; 
                     
                     if (elementId === 'presetsJson') {
-                        // MERGE: INI Text + Current Global Memory Options -> New JSON String
                         finalJsonStr = textToJson(textArea.value);
                         finalToSave = finalJsonStr; 
                     }
@@ -348,17 +358,14 @@ async function syncList(fileName, elementId) {
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
                     alert("保存完了"); 
                     
-                    // Update Synced Data References
                     displayContent = textArea.value; 
                     if (elementId === 'presetsJson') remoteJsonRaw = finalJsonStr;
                 }
             }
             
-            // Sync Finished: Update UI and Global Memory
             textArea.value = displayContent; 
             lastSynced[elementId] = displayContent; 
             
-            // Ensure global memory matches the synced data
             if(elementId === 'presetsJson') {
                 jsonToText(remoteJsonRaw, true);
             }
@@ -460,84 +467,92 @@ function processText() {
 
     text = text.replace(/\n/g, ''); 
     
-    // Step 3: Replace
-    let allRules = [];
-    document.getElementById('replaceList').value.split('\n').forEach(line => {
-        const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
-    });
-    
-    if (activeStyle !== 'none' && loadedPresetsData[activeStyle]) {
-        try {
-            const styleObj = loadedPresetsData[activeStyle];
-            const rules = styleObj.rules ? styleObj.rules : styleObj;
-            if (typeof rules === 'object') {
-                for (let key in rules) {
-                    key.split(',').forEach(c => {
-                        allRules = allRules.filter(r => r.from !== c.trim());
-                        allRules.push({ from: c.trim(), to: rules[key] });
-                    });
+    // Step 3: Replace (Skipped if activeStyle is 'none')
+    if (activeStyle !== 'none') {
+        let allRules = [];
+        document.getElementById('replaceList').value.split('\n').forEach(line => {
+            const parts = line.split('>'); if (parts.length === 2) parts[0].split(',').forEach(c => allRules.push({ from: c.trim(), to: parts[1].trim() }));
+        });
+        
+        if (loadedPresetsData[activeStyle]) {
+            try {
+                const styleObj = loadedPresetsData[activeStyle];
+                const rules = styleObj.rules ? styleObj.rules : styleObj;
+                if (typeof rules === 'object') {
+                    for (let key in rules) {
+                        key.split(',').forEach(c => {
+                            allRules = allRules.filter(r => r.from !== c.trim());
+                            allRules.push({ from: c.trim(), to: rules[key] });
+                        });
+                    }
                 }
-            }
-        } catch(e) { console.error("Style apply error", e); }
-    }
-    allRules.sort((a, b) => b.from.length - a.from.length);
+            } catch(e) { console.error("Style apply error", e); }
+        }
+        allRules.sort((a, b) => b.from.length - a.from.length);
 
-    const occurrenceMap = new Map();
-    let prefixPattern = (activeStyle !== 'none') ? "[台豪米独仏日英韓中]*" : "";
-    
-    allRules.forEach((rule, idx) => {
-        if (!rule.from) return;
-        const fuzzyKey = rule.from.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('[\\s\\n]*');
-        const regex = new RegExp(`${prefixPattern}${fuzzyKey}`, 'gi');
-        text = text.replace(regex, (match) => {
-            if (match.includes('___P_')) return match;
-            const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
-            let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
-            if (match === targetTo) return match;
-            const result = isCompare ? `${match}【>${targetTo}】` : targetTo;
-            const p = `___P_RV_${idx}_${Math.random().toString(36).slice(-2)}___`;
-            protectedItems.push({p, val: result}); return p;
-        });
-    });
-
-    // Step 4: Formatting & Symbols
-    text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
-
-    const replaceSymWithDiff = (regex, target) => { text = text.replace(regex, (m) => (m.includes('___P_') || m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); };
-    replaceSymWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
-    replaceSymWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
-    replaceSymWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
-    replaceSymWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
-    replaceSymWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
-    const tOpen = config.opt_bracket === 'zen' ? '（' : '('; const tClose = config.opt_bracket === 'zen' ? '）' : ')';
-    text = text.replace(/[\(\)（）]/g, (m) => {
-        if (m.includes('___P_')) return m;
-        const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
-    });
-
-    // Updated Punctuation Logic (v30.6)
-    if (config.opt_punctuation === 'ten_maru') {
-        replaceSymWithDiff(/[，,]/g, '、');
-        replaceSymWithDiff(/[．\.]/g, '。');
-    } else if (config.opt_punctuation === 'comma_maru') {
-        replaceSymWithDiff(/、/g, '，');
-        replaceSymWithDiff(/[．\.]/g, '。');
-    } else if (config.opt_punctuation === 'comma_period') {
-        replaceSymWithDiff(/、/g, '，');
-        replaceSymWithDiff(/[。]/g, '．'); 
-        replaceSymWithDiff(/\./g, '．'); 
-    }
-    
-    if (config.opt_mark_space !== 'keep') {
-        const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
-        text = text.replace(/([！？])([ 　]*)([^\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
-            if (match.includes('___P_') || space === markSpaceChar) return match;
-            const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
+        const occurrenceMap = new Map();
+        let prefixPattern = "[台豪米独仏日英韓中]*";
+        
+        allRules.forEach((rule, idx) => {
+            if (!rule.from) return;
+            const fuzzyKey = rule.from.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('[\\s\\n]*');
+            const regex = new RegExp(`${prefixPattern}${fuzzyKey}`, 'gi');
+            text = text.replace(regex, (match) => {
+                if (match.includes('___P_')) return match;
+                const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
+                let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
+                if (match === targetTo) return match;
+                const result = isCompare ? `${match}【>${targetTo}】` : targetTo;
+                const p = `___P_RV_${idx}_${Math.random().toString(36).slice(-2)}___`;
+                protectedItems.push({p, val: result}); return p;
+            });
         });
     }
-    
-    text = text.replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
-    text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
+
+    // Step 4: Formatting & Symbols (Skipped if activeStyle is 'none')
+    if (activeStyle !== 'none') {
+        text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
+
+        const replaceSymWithDiff = (regex, target) => { text = text.replace(regex, (m) => (m.includes('___P_') || m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); };
+        replaceSymWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
+        replaceSymWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
+        replaceSymWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
+        replaceSymWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
+        replaceSymWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
+        const tOpen = config.opt_bracket === 'zen' ? '（' : '('; const tClose = config.opt_bracket === 'zen' ? '）' : ')';
+        text = text.replace(/[\(\)（）]/g, (m) => {
+            if (m.includes('___P_')) return m;
+            const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
+        });
+
+        if (config.opt_punctuation === 'ten_maru') {
+            replaceSymWithDiff(/[，,]/g, '、');
+            replaceSymWithDiff(/[．\.]/g, '。');
+        } else if (config.opt_punctuation === 'comma_maru') {
+            replaceSymWithDiff(/、/g, '，');
+            replaceSymWithDiff(/[．\.]/g, '。');
+        } else if (config.opt_punctuation === 'comma_period') {
+            replaceSymWithDiff(/、/g, '，');
+            replaceSymWithDiff(/[。]/g, '．'); 
+            replaceSymWithDiff(/\./g, '．'); 
+        }
+
+        // v30.7 Feature: Wave Dash
+        const waveChar = config.opt_wave === 'tilde' ? '～' : '〜';
+        replaceSymWithDiff(/[〜～]/g, waveChar);
+        
+        if (config.opt_mark_space !== 'keep') {
+            const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
+            // v30.7 Fix: Added _ to exclusion list to prevent token destruction
+            text = text.replace(/([！？])([ 　]*)([^_\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
+                if (match.includes('___P_') || space === markSpaceChar) return match;
+                const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
+            });
+        }
+        
+        text = text.replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
+        text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
+    }
 
     text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
     for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
