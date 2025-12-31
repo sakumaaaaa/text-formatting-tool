@@ -1,5 +1,5 @@
-// v31.0 Guardian Script
-// Implementation: Ghost Buster (Full Spectrum), Virtual Original, & Silent Round Trip
+// v31.1 Guardian Script
+// Implementation: Ghost Buster, Transparent Tagging, Tag Flattener, Digit Safe, Box 2 Priority
 
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_wave','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
@@ -46,12 +46,10 @@ function copyToClipboard() { const text = document.getElementById('output').inne
 
 // --- List & Modal Logic ---
 
-// Helper: Clean, Unique, Sort (Ascending)
 function formatListContent(text) {
     if (!text) return "";
     const lines = text.split('\n').map(s => s.trim()).filter(s => s !== "");
     const unique = Array.from(new Set(lines));
-    // Sort alphabetically (Ascending) for UI
     unique.sort((a, b) => a.localeCompare(b, 'ja'));
     return unique.join('\n');
 }
@@ -88,10 +86,7 @@ function closeModal() {
 function saveModal() {
     if(currentEditId) {
         let val = document.getElementById('modalTextarea').value;
-        // Auto-format only for text lists, not JSON
-        if (currentEditId !== 'presetsJson') {
-            val = formatListContent(val);
-        }
+        if (currentEditId !== 'presetsJson') { val = formatListContent(val); }
         document.getElementById(currentEditId).value = val;
         onListInput(currentEditId);
         if(currentEditId === 'presetsJson') refreshPresetsFromUI();
@@ -200,7 +195,6 @@ function createNewStyle() {
     alert(`新規スタイル "${name}" を作成しました。`);
 }
 
-// --- Sync & Helper ---
 function checkConflicts() { const alertBox = document.getElementById('conflictAlert'); if(alertBox) alertBox.style.display = 'none'; }
 function filterList() {
     const query = document.getElementById('search_whitelist').value.toLowerCase();
@@ -236,10 +230,7 @@ async function syncList(fileName, elementId) {
     const textArea = document.getElementById(elementId);
     if(!token || !user || !repo) { alert("同期設定が必要です"); return; }
     
-    // Auto-Format before Sync
-    if (elementId !== 'presetsJson') {
-        textArea.value = formatListContent(textArea.value);
-    }
+    if (elementId !== 'presetsJson') { textArea.value = formatListContent(textArea.value); }
     
     const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
     try {
@@ -250,7 +241,6 @@ async function syncList(fileName, elementId) {
             let displayContent = remoteJsonRaw;
             if (elementId === 'presetsJson') displayContent = jsonToText(remoteJsonRaw, false);
             else {
-                // Ensure remote content is also displayed cleanly
                 displayContent = formatListContent(remoteJsonRaw);
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
@@ -279,7 +269,7 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- v31.0 Core Logic ---
+// --- v31.1 Core Logic ---
 
 function getFuzzyRegExp(cleanKey) {
     if (!cleanKey) return null;
@@ -311,12 +301,7 @@ function processText() {
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // --- Phase 1: Ghost Buster (Full Spectrum & Full Noise Cancellation) ---
-    // Remove "ghost spaces/newlines" to create the Virtual Original.
-    // Loop until stable to handle multiple spaces/newlines.
-    // 1. [AlphaNum] [Space/NewLine] [AlphaNum]
-    // 2. [Non-ASCII] [Space/NewLine] [AlphaNum]
-    // 3. [AlphaNum] [Space/NewLine] [Non-ASCII]
+    // --- Phase 1: Ghost Buster (Full Spectrum) ---
     let prevText;
     do {
         prevText = text;
@@ -324,15 +309,14 @@ function processText() {
         text = text.replace(/([^\x00-\x7F])[\s\n]+([a-zA-Z0-9])/g, '$1$2'); 
         text = text.replace(/([a-zA-Z0-9])[\s\n]+([^\x00-\x7F])/g, '$1$2'); 
     } while (text !== prevText);
-
-    // Capture Virtual Original State (before replacements, but after cleaning)
-    // This state includes protection tokens.
-    const virtualOriginalState = text;
+    
+    // Capture Virtual Original State (cleaned)
+    let virtualOriginalText = text;
 
     // --- Phase 2: Box 1 (Cleansing) ---
+    // [v31.1 Change] Transparent Tagging for activeStyle
     if (activeStyle !== 'none') {
         const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
-        // Internal sort by length DESC for matching precision
         companyList.sort((a, b) => b.length - a.length);
         
         companyList.forEach(line => {
@@ -342,27 +326,29 @@ function processText() {
                 const parts = line.split('>');
                 replacement = parts[1].trim();
                 targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
-            } else {
-                replacement = line; targets = [line];
-            }
+            } else { replacement = line; targets = [line]; }
+            
             targets.forEach(src => {
                 const cleanKey = src.replace(/\s+/g, '');
                 const regex = getFuzzyRegExp(cleanKey);
                 if (!regex) return;
                 text = text.replace(regex, (match) => {
                     if (match.includes('___P_')) return match;
-                    const p = `___P_B1_${protectedItems.length}___`;
-                    const val = (isCompare && match !== replacement) ? `${match}【>${replacement}】` : replacement;
-                    protectedItems.push({p, val: val, isDiff: true});
-                    return p;
+                    // PASS-THROUGH: Do not protect if style is active
+                    // But show diff tag if comparison is on
+                    if (isCompare && match !== replacement) {
+                        return `${match}【>${replacement}】`;
+                    }
+                    return replacement;
                 });
             });
         });
     }
 
-    // --- Phase 3: Box 2 (Canonicalization / Absolute Protection) ---
+    // --- Phase 3: Box 2 (Absolute Protection) ---
+    // [v31.1 Change] Priority Sort & Hardening
     const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    whitelist.sort((a, b) => b.length - a.length); // Internal sort
+    whitelist.sort((a, b) => b.length - a.length); // Sort by length DESC
     
     whitelist.forEach((word) => {
         const cleanKey = word.replace(/\s+/g, '');
@@ -370,14 +356,10 @@ function processText() {
         if (!regex) return;
         text = text.replace(regex, (match) => {
             if (match.includes('___P_')) return match;
-            
             let finalVal = word;
             if (isCompare && activeStyle !== 'none') {
-                 if (match !== word) {
-                     finalVal = `${match}【>${word}】`;
-                 }
+                 if (match !== word) finalVal = `${match}【>${word}】`;
             }
-            
             const p = `___P_WL_${protectedItems.length}___`;
             protectedItems.push({p, val: finalVal, isDiff: false}); 
             return p;
@@ -422,7 +404,11 @@ function processText() {
                 let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
                 if (match === targetTo) return match;
                 
+                // Diff Logic inside Box 4
                 const val = isCompare ? `${match}【>${targetTo}】` : targetTo;
+                // Box 4 result must be protected to prevent symbol changes on the replaced text?
+                // Actually usually Box 4 is final construction. Symbols come next.
+                // We protect it so symbols don't break "米Intel" etc.
                 const p = `___P_RV_${protectedItems.length}___`;
                 protectedItems.push({p, val: val, isDiff: true});
                 return p;
@@ -447,9 +433,10 @@ function processText() {
             const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
         });
 
-        if (config.opt_punctuation === 'ten_maru') { replaceSym(/[，,]/g, '、'); replaceSym(/[．\.]/g, '。'); } 
-        else if (config.opt_punctuation === 'comma_maru') { replaceSym(/、/g, '，'); replaceSym(/[．\.]/g, '。'); } 
-        else if (config.opt_punctuation === 'comma_period') { replaceSym(/、/g, '，'); replaceSym(/[。]/g, '．'); replaceSym(/\./g, '．'); }
+        // [v31.1 Change] Digit Safe Punctuation
+        if (config.opt_punctuation === 'ten_maru') { replaceSym(/[，,]/g, '、'); replaceSym(/(?<!\d)[．\.](?!\d)/g, '。'); } 
+        else if (config.opt_punctuation === 'comma_maru') { replaceSym(/、/g, '，'); replaceSym(/(?<!\d)[．\.](?!\d)/g, '。'); } 
+        else if (config.opt_punctuation === 'comma_period') { replaceSym(/、/g, '，'); replaceSym(/[。]/g, '．'); replaceSym(/(?<!\d)\.(?!\d)/g, '．'); }
 
         const waveChar = config.opt_wave === 'tilde' ? '～' : '〜';
         replaceSym(/[〜～]/g, waveChar);
@@ -465,70 +452,58 @@ function processText() {
         text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
     }
 
-    // --- Restoration & Round Trip Check ---
+    // --- Restoration & Tag Flattening ---
     
-    // 1. Create Final Output with Tags (Main display)
+    // 1. Restore tokens
     let finalOutputWithTags = text;
     finalOutputWithTags = finalOutputWithTags.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
     for (let i = protectedItems.length - 1; i >= 0; i--) { 
         finalOutputWithTags = finalOutputWithTags.split(protectedItems[i].p).join(protectedItems[i].val); 
     }
-    
-    // 2. Create Virtual Original Text (Cleaned tokens, no tags)
-    let virtualOriginalText = virtualOriginalState;
+
+    // 2. [v31.1 New] Tag Flattener: Resolve Nested Tags
+    // Pattern: A【>B【>C】】 -> A【>C】
+    // Note: We use a loop to handle potential multiple nestings, though usually it's just one level.
+    // Regex: Match "Content + 【> + Content + 【> + Content + 】 + 】"
+    // Using greedy match might fail on "A【>B【>C】】 ... X【>Y【>Z】】".
+    // We use a safe regex that assumes brackets don't appear in content (except as diff tags).
+    // Logic: Look for the inner-most nest? No, usually it's "Original【>Intermed【>Final】】"
+    if (isCompare) {
+        let prevOut;
+        do {
+            prevOut = finalOutputWithTags;
+            // Match: (Non-bracket)【> (Non-bracket) 【> (Non-bracket) 】 】
+            // We strip the middle part.
+            // $1 = Original, $2 = Final
+            finalOutputWithTags = finalOutputWithTags.replace(/([^【]+?)【>[^【]+?【>(.+?)】】/g, '$1【>$2】');
+        } while (finalOutputWithTags !== prevOut);
+    }
+
+    // 3. Create Virtual Original for Check
     virtualOriginalText = virtualOriginalText.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
-    // Note: virtualOriginalState contains protectedItems, but they were created based on the raw input.
-    // protectedItems[i].val contains Diff tags if they were changed inside protection?
-    // No, Pre-processing protectedItems (URL, TIME) are {val: m, isDiff: false}.
-    // So restoring them returns original values (which is correct for virtual original).
     for (let i = protectedItems.length - 1; i >= 0; i--) { 
-         // We must not use .val if it has diff tags. But pre-proc items don't have diffs.
-         // Box1/2 items (added later) are NOT in virtualOriginalState string yet.
-         // Wait, virtualOriginalState is captured BEFORE Box1/2. 
-         // So it ONLY contains Pre-proc tokens (URL/Time).
-         // So we only need to restore Pre-proc tokens. 
-         // Box1/2 tokens are not in virtualOriginalState string, so split/join won't affect anything for them.
-         // This is perfect.
         if (virtualOriginalText.includes(protectedItems[i].p)) {
-             // For pre-proc, val is the raw string.
+             // Only restore Pre-proc tokens (URL/Time), which don't have diffs in them.
              virtualOriginalText = virtualOriginalText.split(protectedItems[i].p).join(protectedItems[i].val);
         }
     }
 
-    // 3. Create Final Clean Text (No tags)
-    // We can strip tags from finalOutputWithTags.
-    // Tags format: 【>...】
-    // But what if original text had 【>...】? (Edge case, but possible)
-    // Better way: Re-construct text using only the "Target" value of replacements.
-    // But logic is complex. Stripping tags is practical enough for this tool context.
-    // Format: "Original【>New】" -> "New"
-    // Regex: /.*?【>(.*?)】/ -> $1 ... No, it's mixed.
-    // Simple Tag Strip: Replace "Old【>New】" with "New".
-    // Actually, simply removing the diff tag wrapper is tricky if nested? No nesting here.
-    // Let's use a regex to extract the "New" part from the diff format.
-    // Diff format: X【>Y】 -> We want Y.
-    // Pattern: /[^【]+【>(.+?)】/ ... No, X can be empty? No.
-    // Let's rely on the fact that we can construct clean text by running restoration using Clean Values.
-    
-    // Actually, "Silent Round Trip" implies: if the user sees Diff tags, but the content inside > is exactly same as original...
-    // No, logic is: "If (VirtualOriginal === FinalClean), then show VirtualOriginal".
-    // Let's strip tags from finalOutputWithTags.
+    // 4. Create Final Clean Text (Strip tags)
     let finalCleanText = finalOutputWithTags.replace(/.*?【>(.*?)】/g, "$1");
 
-    // Clean up newlines/spaces for comparison
+    // Clean up
     virtualOriginalText = virtualOriginalText.replace(/\n{3,}/g, '\n\n').trim();
     if (hasStartSpace) virtualOriginalText = '　' + virtualOriginalText.replace(/^___S_Z_SP___/, '');
 
     finalCleanText = finalCleanText.replace(/\n{3,}/g, '\n\n').trim();
     if (hasStartSpace) finalCleanText = '　' + finalCleanText.replace(/^___S_Z_SP___/, '');
     
-    // Post-processing final output
     finalOutputWithTags = finalOutputWithTags.replace(/\n{3,}/g, '\n\n').trim();
     if (hasStartSpace) finalOutputWithTags = '　' + finalOutputWithTags.replace(/^___S_Z_SP___/, '');
 
     // ROUND TRIP CHECK
     if (isCompare && virtualOriginalText === finalCleanText) {
-        document.getElementById('output').innerText = finalCleanText; // Show Clean
+        document.getElementById('output').innerText = finalCleanText; 
     } else {
         if (isCompare) document.getElementById('output').innerHTML = finalOutputWithTags.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
         else document.getElementById('output').innerText = finalCleanText;
