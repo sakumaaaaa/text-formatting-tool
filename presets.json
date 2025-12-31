@@ -61,8 +61,23 @@
       "インフィニオン": "Infineon Technologies",
       "デュポン": "DuPont"
     },
-    "options": {},
-    "_meta": {}
+    "options": {
+      "opt_percent": "zen",
+      "opt_ampersand": "zen",
+      "opt_bracket": "zen",
+      "opt_colon": "zen",
+      "opt_punctuation": "ten_maru",
+      "opt_quote": "zen",
+      "opt_mark": "zen",
+      "opt_dash": "zen",
+      "opt_hyphen": "han",
+      "opt_slash": "zen",
+      "opt_equal": "zen",
+      "opt_mark_space": "force"
+    },
+    "_meta": {
+      "updated": "2025-12-31T00:53:44.845Z"
+    }
   },
   "汎用（和名）": {
     "rules": {
@@ -76,7 +91,22 @@
       "Texas Instruments": "TI",
       "STMicroelectronics": "STマイクロ"
     },
-    "options": {},
-    "_meta": {}
+    "options": {
+      "opt_percent": "zen",
+      "opt_ampersand": "zen",
+      "opt_bracket": "zen",
+      "opt_colon": "zen",
+      "opt_punctuation": "ten_maru",
+      "opt_quote": "zen",
+      "opt_mark": "zen",
+      "opt_dash": "zen",
+      "opt_hyphen": "han",
+      "opt_slash": "zen",
+      "opt_equal": "zen",
+      "opt_mark_space": "force"
+    },
+    "_meta": {
+      "updated": "2025-12-31T00:53:57.541Z"
+    }
   }
 }
