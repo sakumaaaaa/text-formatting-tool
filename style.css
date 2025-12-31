@@ -4,10 +4,10 @@
     --config-bg: #fff9db; --opt-bg: #f5f6f7;
     
     /* List Box Colors (Light Mode) */
-    --box1-bg: #e3f2fd; --box1-border: #90caf9;
-    --box2-bg: #f3e5f5; --box2-border: #ce93d8;
-    --box3-bg: #ebfbee; --box3-border: #a5d6a7;
-    --box4-bg: #fff3e0; --box4-border: #ffcc80;
+    --box1-bg: #e3f2fd; --box1-border: #90caf9; /* English: Sky Blue */
+    --box2-bg: #f3e5f5; --box2-border: #ce93d8; /* Shield: Lavender */
+    --box3-bg: #ebfbee; --box3-border: #a5d6a7; /* Replace: Mint Green */
+    --box4-bg: #fff3e0; --box4-border: #ffcc80; /* Style: Orange */
     
     /* Modal Colors */
     --modal-overlay: rgba(0, 0, 0, 0.5);
@@ -17,7 +17,6 @@ body.dark-mode {
     --bg-color: #18191a; --container-bg: #242526; --text-color: #e4e6eb; --border-color: #3e4042;
     --accent-blue: #4599ff; --config-bg: #2c2d2e; --opt-bg: #252627;
     
-    /* List Box Colors (Dark Mode) */
     --box1-bg: #0d2b48; --box1-border: #1e4e79;
     --box2-bg: #2d1a33; --box2-border: #5a3264;
     --box3-bg: #1a301a; --box3-border: #2e5c2e;
@@ -32,17 +31,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 h1 { font-size: 1.4rem; border-left: 6px solid var(--accent-blue); padding-left: 15px; margin: 0 0 20px 0; }
 h2 { font-size: 1.1rem; margin: 25px 0 10px 0; font-weight: bold; border-bottom: 2px solid var(--accent-blue); padding-bottom: 5px; display: block; }
 
-/* Textarea & Inputs */
 textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; font-size: 13px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
 input[type="text"], input[type="password"] { border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; background: var(--container-bg); color: var(--text-color); }
 
-/* Details & Grid */
 details { background: var(--opt-bg); border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); }
 details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
 .details-content { padding: 15px; border-top: 1px solid var(--border-color); }
 .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
 
-/* List Box */
 .list-box { padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; position: relative; }
 .list-box label { font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
 .list-status { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
@@ -50,7 +46,6 @@ details summary { padding: 10px; cursor: pointer; font-weight: bold; font-size: 
 .status-sync { background: #d4edda; color: #155724; }
 .status-unsaved { background: #fff3cd; color: #856404; border: 1px solid var(--accent-orange); }
 
-/* Buttons */
 button { padding: 10px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; color: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 button:hover { opacity: 0.85; transform: translateY(-1px); }
 button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -63,18 +58,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .btn-expand { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 2px 6px; font-size: 10px; margin-left: 5px; }
 .btn-expand:hover { background: rgba(0,0,0,0.05); color: var(--accent-blue); }
 
-/* Header Buttons */
 .header-btn { padding: 6px 12px; font-size: 0.85rem; }
 #modeBtn { background: #343a40; color: #fff; }
-body.dark-mode #modeBtn { background: #f8f9fa; color: #343a40; border: 1px solid #ccc; }
+body.dark-mode #modeBtn { background: #f8f9fa; color: #343a40; }
 #clearBtn { background: var(--accent-red); color: #fff; }
 
-/* Options Grid */
 .options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.8rem; }
 .opt-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
 .opt-item select { font-size: 0.75rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-color); }
 
-/* Controls & Output */
 .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border: 1px solid var(--border-color); }
 .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
 #output { background: var(--container-bg); padding: 20px; border: 2px solid var(--border-color); border-radius: 8px; white-space: pre-wrap; min-height: 250px; font-size: 15px; line-height: 1.6; }
@@ -84,7 +76,7 @@ body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
 
 /* Modal Styles */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: var(--modal-overlay); }
-.modal-content { background-color: var(--container-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 900px; height: 80%; border-radius: 8px; display: flex; flex-direction: column; color: var(--text-color); }
+.modal-content { background-color: var(--container-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 900px; height: 80%; border-radius: 8px; display: flex; flex-direction: column; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px; }
-.modal-textarea { flex-grow: 1; resize: none; font-size: 14px; line-height: 1.5; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+.modal-textarea { flex-grow: 1; resize: none; font-size: 14px; line-height: 1.5; }
