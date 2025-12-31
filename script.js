@@ -1,5 +1,5 @@
 // v31.0 Guardian Script
-// Implementation: Ghost Buster & Solid State Architecture
+// Implementation: Ghost Buster (Full Spectrum) & Solid State Architecture
 
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_wave','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
@@ -85,8 +85,7 @@ function saveModal() {
     closeModal();
 }
 
-// --- JSON & Style Management (Same as v30.7) ---
-// (Logic retained to ensure data integrity)
+// --- JSON & Style Management ---
 function jsonToText(jsonStr, updateGlobal = true) {
     try {
         const obj = JSON.parse(jsonStr);
@@ -195,7 +194,7 @@ function filterList() {
     if (query === "") { textArea.value = masterWhitelist.join('\n'); textArea.readOnly = false; textArea.style.opacity = "1"; }
     else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
 }
-function suggestRules() { /* Same as v30.7 */ 
+function suggestRules() { 
     const out = document.getElementById('output').innerText; if(!out) { alert("まずは整形を実行してください。"); return; }
     const matches = out.match(/[ァ-ヶー]{3,}/g) || [];
     const rules = []; const seen = new Set();
@@ -260,13 +259,10 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- v31.0 Core Logic: Ghost Buster & Solid State ---
+// --- v31.0 Core Logic: Ghost Buster (Full Spectrum) ---
 
-// Updated: Generates fuzzy regex for already cleaned text (key's spaces are removed)
 function getFuzzyRegExp(cleanKey) {
     if (!cleanKey) return null;
-    // Input 'cleanKey' is assumed to have NO spaces.
-    // We match it against text that might have newlines or slight debris (though Phase 1 cleans most).
     const chars = cleanKey.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
     const pattern = chars.join('[\\s\\n]*');
     return new RegExp(pattern, 'gi');
@@ -290,25 +286,26 @@ function processText() {
         return p;
     };
     
-    // Protect URL, Time, Paragraphs
     text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => protect(m, 'URL'));
     text = text.replace(/\d{1,2}:\d{2}/g, (m) => protect(m, 'TIME'));
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // --- Phase 1: Ghost Buster (The Cleaner) ---
-    // Remove spaces between alphanumeric characters.
-    // This creates the "Virtual Original". No Diff tags generated here.
-    // e.g. "G a r a x y" -> "Garaxy", "O r a n g e" -> "Orange", "GaN HEMT" -> "GaNHEMT"
+    // --- Phase 1: Ghost Buster (Full Spectrum) ---
+    // Remove "ghost spaces" to create the Virtual Original.
+    // 1. [AlphaNum] [Space] [AlphaNum]  (e.g. G a r a x y -> Garaxy)
+    // 2. [Non-ASCII] [Space] [AlphaNum] (e.g. 2020 年 -> 2020年)
+    // 3. [AlphaNum] [Space] [Non-ASCII] (e.g. Intel の -> Intelの)
     let prevText;
     do {
         prevText = text;
-        text = text.replace(/([a-zA-Z0-9]) +([a-zA-Z0-9])/g, '$1$2');
+        text = text.replace(/([a-zA-Z0-9]) +([a-zA-Z0-9])/g, '$1$2'); // Alpha-Alpha
+        text = text.replace(/([^\x00-\x7F]) +([a-zA-Z0-9])/g, '$1$2'); // Jap-Alpha
+        text = text.replace(/([a-zA-Z0-9]) +([^\x00-\x7F])/g, '$1$2'); // Alpha-Jap
     } while (text !== prevText);
 
 
     // --- Phase 2: Box 1 (Cleansing) ---
-    // Condition: Only if style is NOT none.
     if (activeStyle !== 'none') {
         const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
         companyList.forEach(line => {
@@ -319,19 +316,15 @@ function processText() {
                 replacement = parts[1].trim();
                 targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
             } else {
-                replacement = line; targets = [line]; // Self-correction
+                replacement = line; targets = [line];
             }
             targets.forEach(src => {
-                // Remove spaces from key for matching against Ghost-Busted text
                 const cleanKey = src.replace(/\s+/g, '');
                 const regex = getFuzzyRegExp(cleanKey);
                 if (!regex) return;
                 text = text.replace(regex, (match) => {
                     if (match.includes('___P_')) return match;
-                    // Diff generation
                     const p = `___P_B1_${protectedItems.length}___`;
-                    // If match differs from replacement, show Diff. 
-                    // Note: match is Ghost-Busted text.
                     const val = (isCompare && match !== replacement) ? `${match}【>${replacement}】` : replacement;
                     protectedItems.push({p, val: val, isDiff: true});
                     return p;
@@ -341,8 +334,6 @@ function processText() {
     }
 
     // --- Phase 3: Box 2 (Canonicalization / Absolute Protection) ---
-    // Always runs. Enforces dictionary spacing.
-    // e.g. Input(Cleaned): "GaNHEMT" -> Dictionary: "GaN HEMT" -> Output: "GaN HEMT"
     const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
     whitelist.forEach((word) => {
         const cleanKey = word.replace(/\s+/g, '');
@@ -351,19 +342,12 @@ function processText() {
         text = text.replace(regex, (match) => {
             if (match.includes('___P_')) return match;
             
-            // Logic:
-            // If activeStyle is none -> Silent fix (no diff tag).
-            // If activeStyle is set -> Show Diff if changed.
-            
             let finalVal = word;
             if (isCompare && activeStyle !== 'none') {
-                 // Check if match (cleaned text) is different from target (word with spaces)
-                 // "GaNHEMT" !== "GaN HEMT" -> True
                  if (match !== word) {
                      finalVal = `${match}【>${word}】`;
                  }
             }
-            // If activeStyle is none, finalVal remains 'word' (clean fix).
             
             const p = `___P_WL_${protectedItems.length}___`;
             protectedItems.push({p, val: finalVal, isDiff: false}); 
@@ -371,7 +355,6 @@ function processText() {
         });
     });
 
-    // Remove remaining newlines for replacement phase
     text = text.replace(/\n/g, ''); 
 
     // --- Phase 4: Box 3 & 4 (Replacement) ---
@@ -458,8 +441,6 @@ function processText() {
     for (let i = protectedItems.length - 1; i >= 0; i--) { 
         text = text.split(protectedItems[i].p).join(protectedItems[i].val); 
     }
-    
-    // Ghost Buster might have left no text if input was just spaces? No, logic preserves chars.
     
     text = text.replace(/\n{3,}/g, '\n\n').trim();
     if (hasStartSpace) text = '　' + text.replace(/^___S_Z_SP___/, '');
