@@ -4,10 +4,10 @@
     --config-bg: #fff9db; --opt-bg: #f5f6f7;
     
     /* List Box Colors (Light Mode) */
-    --box1-bg: #e3f2fd; --box1-border: #90caf9; /* English: Sky Blue */
-    --box2-bg: #f3e5f5; --box2-border: #ce93d8; /* Shield: Lavender (Protection) */
-    --box3-bg: #ebfbee; --box3-border: #a5d6a7; /* Replace: Mint Green */
-    --box4-bg: #fff3e0; --box4-border: #ffcc80; /* Style: Orange */
+    --box1-bg: #e3f2fd; --box1-border: #90caf9;
+    --box2-bg: #f3e5f5; --box2-border: #ce93d8;
+    --box3-bg: #ebfbee; --box3-border: #a5d6a7;
+    --box4-bg: #fff3e0; --box4-border: #ffcc80;
     
     /* Modal Colors */
     --modal-overlay: rgba(0, 0, 0, 0.5);
@@ -18,10 +18,10 @@ body.dark-mode {
     --accent-blue: #4599ff; --config-bg: #2c2d2e; --opt-bg: #252627;
     
     /* List Box Colors (Dark Mode) */
-    --box1-bg: #0d2b48; --box1-border: #1e4e79; /* Deep Blue */
-    --box2-bg: #2d1a33; --box2-border: #5a3264; /* Deep Purple */
-    --box3-bg: #1a301a; --box3-border: #2e5c2e; /* Deep Green */
-    --box4-bg: #362612; --box4-border: #664d00; /* Deep Orange */
+    --box1-bg: #0d2b48; --box1-border: #1e4e79;
+    --box2-bg: #2d1a33; --box2-border: #5a3264;
+    --box3-bg: #1a301a; --box3-border: #2e5c2e;
+    --box4-bg: #362612; --box4-border: #664d00;
     
     --modal-overlay: rgba(0, 0, 0, 0.7);
     --modal-bg: #242526;
@@ -63,10 +63,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .btn-expand { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 2px 6px; font-size: 10px; margin-left: 5px; }
 .btn-expand:hover { background: rgba(0,0,0,0.05); color: var(--accent-blue); }
 
-/* Header Buttons (Updated v31.0) */
+/* Header Buttons */
 .header-btn { padding: 6px 12px; font-size: 0.85rem; }
 #modeBtn { background: #343a40; color: #fff; }
-body.dark-mode #modeBtn { background: #f8f9fa; color: #343a40; }
+body.dark-mode #modeBtn { background: #f8f9fa; color: #343a40; border: 1px solid #ccc; }
 #clearBtn { background: var(--accent-red); color: #fff; }
 
 /* Options Grid */
@@ -82,9 +82,9 @@ body.dark-mode #modeBtn { background: #f8f9fa; color: #343a40; }
 body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
 .counter-badge { font-size: 0.75rem; background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 10px; }
 
-/* Modal Styles (New v31.0) */
+/* Modal Styles */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: var(--modal-overlay); }
-.modal-content { background-color: var(--container-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 900px; height: 80%; border-radius: 8px; display: flex; flex-direction: column; }
+.modal-content { background-color: var(--container-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 900px; height: 80%; border-radius: 8px; display: flex; flex-direction: column; color: var(--text-color); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px; }
-.modal-textarea { flex-grow: 1; resize: none; font-size: 14px; line-height: 1.5; }
+.modal-textarea { flex-grow: 1; resize: none; font-size: 14px; line-height: 1.5; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--container-bg); color: var(--text-color); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
