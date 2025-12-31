@@ -1,5 +1,6 @@
-// v30.7 Guardian Script
-// Added 'opt_wave' to keys
+// v31.0 Guardian Script
+// Protocol: Ghost Buster & Canonicalization
+
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_wave','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
 let masterWhitelist = []; 
@@ -7,12 +8,14 @@ let masterCompanyList = [];
 let loadedPresetsData = {}; 
 let currentSuggestions = [];
 
+// Modal State
+let currentModalTargetId = null;
+
 window.onload = function() {
     document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
     if(localStorage.getItem('gh_user')) document.getElementById('githubUser').value = localStorage.getItem('gh_user');
     if(localStorage.getItem('gh_repo')) document.getElementById('githubRepo').value = localStorage.getItem('gh_repo');
     
-    // Restore local option settings
     OPT_KEYS.forEach(id => {
         const val = localStorage.getItem(id); 
         if(val) document.getElementById(id).value = val;
@@ -24,14 +27,11 @@ window.onload = function() {
     document.getElementById('modeBtn').addEventListener('click', toggleDarkMode);
     if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
     
-    // Hot-Fix: Real-time update for presetsJson
     document.getElementById('presetsJson').addEventListener('input', () => {
         refreshPresetsFromUI();
     });
 
     updateStyleSelect();
-    
-    // Initial apply for UI state (enable/disable options based on default 'none')
     applyStyle(document.getElementById('activeStyle').value);
 };
 
@@ -53,17 +53,11 @@ function copyToClipboard() { const text = document.getElementById('output').inne
 
 function checkUnsaved(id) {
     const status = document.getElementById('status_' + id);
-    
-    // Priority check for explicit NULL (Force Unsaved)
     if (lastSynced[id] === null) {
-        status.innerText = "⚠️ 未共有"; 
-        status.className = "list-status status-unsaved";
-        return;
+        status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; return;
     }
-
     const current = document.getElementById(id).value.trim(); 
     const last = (lastSynced[id] || "").trim();
-    
     if (last === "") { status.innerText = "☁️ 未読込"; status.className = "list-status status-init"; }
     else if (current !== last) { status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; }
     else { status.innerText = "✅ 最新"; status.className = "list-status status-sync"; }
@@ -88,21 +82,58 @@ function filterList() {
     else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
 }
 
+// --- Modal Functions ---
+
+function openModal(targetId, title) {
+    currentModalTargetId = targetId;
+    document.getElementById('modalTitle').innerText = title;
+    document.getElementById('modalTextarea').value = document.getElementById(targetId).value;
+    document.getElementById('editorModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('editorModal').classList.remove('active');
+    currentModalTargetId = null;
+}
+
+function saveModal() {
+    if(currentModalTargetId) {
+        const val = document.getElementById('modalTextarea').value;
+        document.getElementById(currentModalTargetId).value = val;
+        // Trigger input event logic
+        if(currentModalTargetId === 'presetsJson') refreshPresetsFromUI();
+        else onListInput(currentModalTargetId);
+    }
+    closeModal();
+}
+
+function sortModalList() {
+    const txt = document.getElementById('modalTextarea');
+    const lines = txt.value.split('\n').filter(s => s.trim() !== "");
+    // Simple sort for now, advanced sort could be added
+    lines.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    txt.value = lines.join('\n');
+}
+
+function uniqueModalList() {
+    const txt = document.getElementById('modalTextarea');
+    const lines = txt.value.split('\n').map(s => s.trim()).filter(s => s !== "");
+    const unique = Array.from(new Set(lines));
+    txt.value = unique.join('\n');
+}
+
 // --- JSON & Style Management ---
 
 function jsonToText(jsonStr, updateGlobal = true) {
     try {
         const obj = JSON.parse(jsonStr);
         if (updateGlobal) loadedPresetsData = obj; 
-        
         let text = "";
         for (let style in obj) {
             text += `[${style}]\n`;
             const rules = obj[style].rules ? obj[style].rules : obj[style];
             if (typeof rules === 'object') {
-                for (let from in rules) {
-                    text += `${from} > ${rules[from]}\n`;
-                }
+                for (let from in rules) { text += `${from} > ${rules[from]}\n`; }
             }
             text += "\n";
         }
@@ -115,48 +146,25 @@ function textToJson(text) {
     const lines = text.split('\n');
     const newRulesMap = {};
     let curStyle = null;
-    
     lines.forEach(l => {
         l = l.trim(); if (!l) return;
         if (l.startsWith('[') && l.endsWith(']')) { 
-            curStyle = l.slice(1, -1); 
-            newRulesMap[curStyle] = {}; 
+            curStyle = l.slice(1, -1); newRulesMap[curStyle] = {}; 
         } else if (curStyle && l.includes('>')) { 
             const p = l.split('>').map(s => s.trim()); 
             if (p.length === 2) newRulesMap[curStyle][p[0]] = p[1]; 
         }
     });
-
     let finalObj = JSON.parse(JSON.stringify(loadedPresetsData)); 
-    
     for (let styleName in newRulesMap) {
         if (!finalObj[styleName]) {
-            finalObj[styleName] = { 
-                rules: newRulesMap[styleName], 
-                options: {}, 
-                _meta: { created: new Date().toISOString() } 
-            };
+            finalObj[styleName] = { rules: newRulesMap[styleName], options: {}, _meta: { created: new Date().toISOString() } };
         } else {
-            if (finalObj[styleName].rules) {
-                finalObj[styleName].rules = newRulesMap[styleName];
-            } else {
-                const savedOptions = finalObj[styleName].options || {}; 
-                const savedMeta = finalObj[styleName]._meta || {};
-                finalObj[styleName] = {
-                    rules: newRulesMap[styleName],
-                    options: savedOptions,
-                    _meta: savedMeta
-                };
-            }
+            if (finalObj[styleName].rules) finalObj[styleName].rules = newRulesMap[styleName];
+            else finalObj[styleName] = { rules: newRulesMap[styleName], options: finalObj[styleName].options || {}, _meta: finalObj[styleName]._meta || {} };
         }
     }
-    
-    for (let key in finalObj) {
-        if (!newRulesMap[key]) {
-            delete finalObj[key];
-        }
-    }
-
+    for (let key in finalObj) { if (!newRulesMap[key]) delete finalObj[key]; }
     return JSON.stringify(finalObj, null, 2);
 }
 
@@ -166,9 +174,7 @@ function refreshPresetsFromUI() {
         const jsonStr = textToJson(text);
         loadedPresetsData = JSON.parse(jsonStr);
         updateStyleSelect();
-    } catch(e) {
-        console.error("Hot-reload error:", e);
-    }
+    } catch(e) { console.error("Hot-reload error:", e); }
 }
 
 function updateStyleSelect(dataObj) {
@@ -176,23 +182,13 @@ function updateStyleSelect(dataObj) {
     const btnUpdate = document.getElementById('btnUpdateStyle');
     const currentVal = select.value;
     const data = dataObj || loadedPresetsData;
-    
     select.innerHTML = '<option value="none">なし (単純整形のみ)</option>';
-    
     if (!data) return;
-    
     Object.keys(data).forEach(style => {
         const opt = document.createElement('option');
-        opt.value = style;
-        opt.innerText = style;
-        select.appendChild(opt);
+        opt.value = style; opt.innerText = style; select.appendChild(opt);
     });
-    
-    if (Object.keys(data).includes(currentVal)) {
-        select.value = currentVal;
-    }
-    
-    // Update Button State
+    if (Object.keys(data).includes(currentVal)) select.value = currentVal;
     if (select.value === 'none') {
         if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
     } else {
@@ -204,99 +200,55 @@ function applyStyle(styleName) {
     const infoSpan = document.getElementById('styleInfo');
     const btnUpdate = document.getElementById('btnUpdateStyle');
     const isNone = styleName === 'none';
-
-    // v30.7 Spec: Disable all options when 'none'
     OPT_KEYS.forEach(id => {
         const el = document.getElementById(id);
-        if(el) {
-            el.disabled = isNone;
-            el.style.opacity = isNone ? "0.5" : "1";
-        }
+        if(el) { el.disabled = isNone; el.style.opacity = isNone ? "0.5" : "1"; }
     });
-
     if (isNone) {
         if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
     } else {
         if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${styleName}] を更新`; }
     }
-
-    if (isNone || !loadedPresetsData[styleName]) {
-        infoSpan.innerText = "";
-        return;
-    }
-
+    if (isNone || !loadedPresetsData[styleName]) { infoSpan.innerText = ""; return; }
     const styleData = loadedPresetsData[styleName];
     if (styleData.options && Object.keys(styleData.options).length > 0) {
         let appliedCount = 0;
         for (let key in styleData.options) {
             const el = document.getElementById(key);
-            if (el) {
-                el.value = styleData.options[key];
-                el.dispatchEvent(new Event('change'));
-                appliedCount++;
-            }
+            if (el) { el.value = styleData.options[key]; el.dispatchEvent(new Event('change')); appliedCount++; }
         }
         infoSpan.innerText = `✅ ${appliedCount}個のオプションを適用`;
-    } else {
-        infoSpan.innerText = "ℹ️ オプション設定なし (辞書のみ)";
-    }
+    } else { infoSpan.innerText = "ℹ️ オプション設定なし (辞書のみ)"; }
 }
-
-// --- New Style Management Functions ---
 
 function getCurrentOptions() {
     const currentOptions = {};
-    OPT_KEYS.forEach(k => {
-        const el = document.getElementById(k);
-        if(el) currentOptions[k] = el.value;
-    });
+    OPT_KEYS.forEach(k => { const el = document.getElementById(k); if(el) currentOptions[k] = el.value; });
     return currentOptions;
 }
 
 function updateCurrentStyle() {
     const name = document.getElementById('activeStyle').value;
     if (name === 'none' || !loadedPresetsData[name]) return;
-
     loadedPresetsData[name].options = getCurrentOptions();
     loadedPresetsData[name]._meta.updated = new Date().toISOString();
-
     const textArea = document.getElementById('presetsJson');
     textArea.value = jsonToText(JSON.stringify(loadedPresetsData));
-    
-    // Force unsaved status
-    lastSynced['presetsJson'] = null;
-    checkUnsaved('presetsJson');
-    
-    alert(`スタイル "${name}" のオプション設定を更新しました。\n[4. 媒体別スタイル] の同期ボタンでクラウドに保存してください。`);
+    lastSynced['presetsJson'] = null; checkUnsaved('presetsJson');
+    alert(`スタイル "${name}" のオプション設定を更新しました。`);
 }
 
 function createNewStyle() {
     const name = document.getElementById('newStyleName').value.trim();
     if (!name) { alert("スタイル名を入力してください"); return; }
-    if (loadedPresetsData[name]) { alert(`スタイル "${name}" は既に存在します。更新ボタンを使用してください。`); return; }
-
-    loadedPresetsData[name] = { 
-        rules: {}, 
-        options: getCurrentOptions(), 
-        _meta: { created: new Date().toISOString() } 
-    };
-
+    if (loadedPresetsData[name]) { alert(`スタイル "${name}" は既に存在します。`); return; }
+    loadedPresetsData[name] = { rules: {}, options: getCurrentOptions(), _meta: { created: new Date().toISOString() } };
     const textArea = document.getElementById('presetsJson');
-    textArea.value += `\n[${name}]\n`; 
-    textArea.value = jsonToText(JSON.stringify(loadedPresetsData));
-
-    // Force unsaved status
-    lastSynced['presetsJson'] = null;
-    checkUnsaved('presetsJson');
-    
-    updateStyleSelect();
-    document.getElementById('activeStyle').value = name;
-    applyStyle(name); 
-    
-    alert(`新規スタイル "${name}" を作成しました。\n[4. 媒体別スタイル] の同期ボタンでクラウドに保存してください。`);
+    textArea.value += `\n[${name}]\n`; textArea.value = jsonToText(JSON.stringify(loadedPresetsData));
+    lastSynced['presetsJson'] = null; checkUnsaved('presetsJson');
+    updateStyleSelect(); document.getElementById('activeStyle').value = name; applyStyle(name); 
+    alert(`新規スタイル "${name}" を作成しました。`);
 }
-
-// --- Sync & Suggest Logic ---
 
 function suggestRules() {
     const out = document.getElementById('output').innerText; if(!out) { alert("まずは整形を実行してください。"); return; }
@@ -332,51 +284,31 @@ async function syncList(fileName, elementId) {
         const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
         if (res.ok) {
             const data = await res.json();
-            let remoteJsonRaw = decodeURIComponent(escape(atob(data.content))); // Raw JSON string
+            let remoteJsonRaw = decodeURIComponent(escape(atob(data.content))); 
             let displayContent = remoteJsonRaw; 
-            
-            if (elementId === 'presetsJson') {
-                displayContent = jsonToText(remoteJsonRaw, false);
-            } else {
+            if (elementId === 'presetsJson') displayContent = jsonToText(remoteJsonRaw, false);
+            else {
                 const lines = (remoteJsonRaw.includes(',') && !remoteJsonRaw.includes('\n')) ? remoteJsonRaw.split(',').map(s=>s.trim()) : remoteJsonRaw.split('\n').map(s=>s.trim());
                 displayContent = Array.from(new Set(lines)).filter(s=>s!=="").join('\n');
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
             }
-
             if (textArea.value.trim() !== "" && (textArea.value.trim() !== displayContent.trim() || lastSynced[elementId] === null)) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
-                    let finalToSave = textArea.value; 
-                    let finalJsonStr = textArea.value; 
-                    
-                    if (elementId === 'presetsJson') {
-                        finalJsonStr = textToJson(textArea.value);
-                        finalToSave = finalJsonStr; 
-                    }
-                    
+                    let finalToSave = textArea.value; let finalJsonStr = textArea.value; 
+                    if (elementId === 'presetsJson') { finalJsonStr = textToJson(textArea.value); finalToSave = finalJsonStr; }
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
-                    alert("保存完了"); 
-                    
-                    displayContent = textArea.value; 
-                    if (elementId === 'presetsJson') remoteJsonRaw = finalJsonStr;
+                    alert("保存完了"); displayContent = textArea.value; if (elementId === 'presetsJson') remoteJsonRaw = finalJsonStr;
                 }
             }
-            
-            textArea.value = displayContent; 
-            lastSynced[elementId] = displayContent; 
-            
-            if(elementId === 'presetsJson') {
-                jsonToText(remoteJsonRaw, true);
-            }
-
-            checkUnsaved(elementId); 
-            alert("同期完了");
+            textArea.value = displayContent; lastSynced[elementId] = displayContent; 
+            if(elementId === 'presetsJson') jsonToText(remoteJsonRaw, true);
+            checkUnsaved(elementId); alert("同期完了");
             if(elementId !== 'presetsJson') checkConflicts();
         } else if(res.status === 404) {
              if(confirm(`ファイル ${fileName} が見つかりません。新規作成しますか？`)) {
-                 let content = textArea.value;
-                 if (elementId === 'presetsJson') content = "{}";
+                 let content = textArea.value; if (elementId === 'presetsJson') content = "{}";
                  await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                     body: JSON.stringify({ message: `Create ${fileName}`, content: btoa(unescape(encodeURIComponent(content))) }) });
                  alert("ファイルを作成しました。"); lastSynced[elementId] = textArea.value; checkUnsaved(elementId);
@@ -385,11 +317,22 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- Core Logic ---
+// --- v31.0 Core Logic ---
 
 function getFuzzyRegExp(word) {
     if (!word) return null;
     const chars = word.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+    const pattern = chars.join('[\\s\\n]*');
+    return new RegExp(pattern, 'gi');
+}
+
+// v31.0 New Feature: Ignore spaces in key for matching (Canonicalization)
+function getFlexibleRegExp(word) {
+    if (!word) return null;
+    // Remove all spaces from the dictionary key first
+    const cleanWord = word.replace(/\s+/g, '');
+    const chars = cleanWord.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+    // Insert flexible space matcher between characters
     const pattern = chars.join('[\\s\\n]*');
     return new RegExp(pattern, 'gi');
 }
@@ -411,63 +354,62 @@ function processText() {
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // Step 1: Company List
+    // Step 1: Company List (Box 1)
     const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
     companyList.forEach(line => {
-        let targets = [];
-        let replacement = "";
-        let shouldProtect = false;
-
+        let targets = []; let replacement = ""; let shouldProtect = false;
         if (line.includes('>')) {
-            const parts = line.split('>');
-            replacement = parts[1].trim();
-            if (activeStyle === 'none') {
-                targets = [replacement]; shouldProtect = true;
-            } else {
-                targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
-                targets.push(replacement);
-            }
+            const parts = line.split('>'); replacement = parts[1].trim();
+            if (activeStyle === 'none') { targets = [replacement]; shouldProtect = true; } 
+            else { targets = parts[0].split(',').map(s => s.trim()).filter(s => s); targets.push(replacement); }
         } else {
-            replacement = line; targets = [line];
-            if (activeStyle === 'none') shouldProtect = true;
+            replacement = line; targets = [line]; if (activeStyle === 'none') shouldProtect = true;
         }
-
         targets.forEach(src => {
-            const regex = getFuzzyRegExp(src);
+            const regex = getFuzzyRegExp(src); // Box 1 uses fuzzy match but respects spaces in source definition (mostly)
             if (!regex) return;
             text = text.replace(regex, (match) => {
                 if (match.includes('___P_')) return match;
                 if (shouldProtect) {
                     const p = `___P_WL_CMP_${Math.random().toString(36).slice(-2)}___`;
-                    protectedItems.push({p, val: replacement});
-                    return p;
+                    protectedItems.push({p, val: replacement}); return p;
                 }
                 return replacement;
             });
         });
     });
 
-    // Step 2: Whitelist
+    // Step 2: Whitelist (Box 2) - v31.0 Canonicalization
     const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
     whitelist.forEach((word, i) => {
-        const regex = getFuzzyRegExp(word);
+        // v31.0: Use flexible regex (ignores spaces in dictionary word for matching pattern)
+        const regex = getFlexibleRegExp(word);
         if (!regex) return;
         text = text.replace(regex, (match) => {
             if (match.includes('___P_')) return match;
-            const hasNewline = match.includes('\n');
-            let resultWord = word;
-            if (match === word && !hasNewline) resultWord = word;
-            const val = (isCompare && match !== word && match.replace(/[\s\n]+/g, '') === word) 
-                        ? (match.includes('\n') ? word : `${match}【>${word}】`) : word;
+            // Force replace with dictionary defined word (canonical restoration)
+            const target = word; 
+            const val = (isCompare && match !== target) ? (match.includes('\n') ? target : `${match}【>${target}】`) : target;
             const p = `___P_WL_${i}_${Math.random().toString(36).slice(-2)}___`;
-            protectedItems.push({p, val: word}); 
+            protectedItems.push({p, val: val}); 
             return p;
         });
     });
 
+    // Step 2.5: Ghost Buster (v31.0 New Logic)
+    // Remove spaces between alphanumeric characters that were NOT protected by Box 2
+    let prevText = "";
+    while (text !== prevText) {
+        prevText = text;
+        // Find [AlphaNum] [Spaces] [AlphaNum] and remove spaces.
+        // Protection tokens (___P_...) consist of _, P, WL, etc. 
+        // We must ensure we don't merge across token boundaries if they look like alphanum (they shouldn't due to underscores).
+        text = text.replace(/([a-zA-Z0-9])[\s\n]+([a-zA-Z0-9])/g, '$1$2');
+    }
+
     text = text.replace(/\n/g, ''); 
-    
-    // Step 3: Replace (Skipped if activeStyle is 'none')
+
+    // Step 3: Replace (Box 3 & 4)
     if (activeStyle !== 'none') {
         let allRules = [];
         document.getElementById('replaceList').value.split('\n').forEach(line => {
@@ -509,7 +451,7 @@ function processText() {
         });
     }
 
-    // Step 4: Formatting & Symbols (Skipped if activeStyle is 'none')
+    // Step 4: Formatting (Box 4)
     if (activeStyle !== 'none') {
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
 
@@ -537,13 +479,11 @@ function processText() {
             replaceSymWithDiff(/\./g, '．'); 
         }
 
-        // v30.7 Feature: Wave Dash
         const waveChar = config.opt_wave === 'tilde' ? '～' : '〜';
         replaceSymWithDiff(/[〜～]/g, waveChar);
         
         if (config.opt_mark_space !== 'keep') {
             const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
-            // v30.7 Fix: Added _ to exclusion list to prevent token destruction
             text = text.replace(/([！？])([ 　]*)([^_\n）〉」』】］\}])/g, (match, m1, space, nextChar) => {
                 if (match.includes('___P_') || space === markSpaceChar) return match;
                 const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
