@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト整形くん 校閲Pro (v30.6 ColorTuned)</title>
+    <title>テキスト整形くん 校閲Pro (v30.7)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="light-mode">
@@ -13,7 +13,7 @@
         <button id="clearBtn">🗑️ 全削除</button>
     </div>
     
-    <h1>テキスト整形くん 校閲Pro <span style="font-size:0.6em; color:var(--accent-blue); vertical-align:middle;">v30.6 ColorTuned</span></h1>
+    <h1>テキスト整形くん 校閲Pro <span style="font-size:0.6em; color:var(--accent-blue); vertical-align:middle;">v30.7</span></h1>
 
     <details>
         <summary>🔧 チーム同期・基本設定</summary>
@@ -88,6 +88,8 @@
                 <div class="opt-item"><span>： コロン</span><select id="opt_colon"><option value="zen">全角 ：</option><option value="han">半角 :</option></select></div>
                 <div class="opt-item"><span>読点・句点</span><select id="opt_punctuation"><option value="ten_maru">テン・マル 、。</option><option value="comma_maru">カンマ・マル ，。</option><option value="comma_period">カンマ・ピリ ，．</option></select></div>
                 <div class="opt-item"><span>引用符</span><select id="opt_quote"><option value="zen">全角 “”</option><option value="han">半角 ""</option></select></div>
+                <!-- v30.7 Feature: opt_wave -->
+                <div class="opt-item"><span>～ 波ダーシ</span><select id="opt_wave"><option value="wave">波ダーシ 〜</option><option value="tilde">全角チルダ ～</option></select></div>
                 <div class="opt-item"><span>― ダーシ</span><select id="opt_dash"><option value="zen">全角 ―</option><option value="han">半角 -</option></select></div>
                 <div class="opt-item"><span>- ハイフン</span><select id="opt_hyphen"><option value="han">半角 -</option><option value="zen">全角 －</option></select></div>
                 <div class="opt-item"><span>／ スラッシュ</span><select id="opt_slash"><option value="han">半角 /</option><option value="zen">全角 ／</option></select></div>
@@ -116,7 +118,8 @@
         <div style="flex-grow:1;">
             <label style="font-weight:bold; font-size:0.9rem;">適用スタイル:</label>
             <select id="activeStyle" class="style-select" onchange="applyStyle(this.value)">
-                <option value="none">なし (整形のみ)</option>
+                <!-- v30.7 Update: Name change -->
+                <option value="none">なし (単純整形のみ)</option>
                 <!-- Options will be populated dynamically -->
             </select>
             <span id="styleInfo" style="font-size:0.8rem; color:#666; margin-left:10px;"></span>
