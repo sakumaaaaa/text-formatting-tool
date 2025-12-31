@@ -1,5 +1,5 @@
 // v31.0 Guardian Script
-// Protocol: Ghost Buster & Canonicalization
+// Implementation: Ghost Buster & Solid State Architecture
 
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_wave','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
@@ -7,9 +7,7 @@ let masterWhitelist = [];
 let masterCompanyList = []; 
 let loadedPresetsData = {}; 
 let currentSuggestions = [];
-
-// Modal State
-let currentModalTargetId = null;
+let currentEditId = null; // For Modal
 
 window.onload = function() {
     document.getElementById('githubToken').value = localStorage.getItem('gh_token') || '';
@@ -19,18 +17,13 @@ window.onload = function() {
     OPT_KEYS.forEach(id => {
         const val = localStorage.getItem(id); 
         if(val) document.getElementById(id).value = val;
-        document.getElementById(id).addEventListener('change', () => {
-            saveSettings();
-        });
+        document.getElementById(id).addEventListener('change', () => saveSettings());
     });
     
     document.getElementById('modeBtn').addEventListener('click', toggleDarkMode);
     if(localStorage.getItem('theme') === 'dark') toggleDarkMode();
     
-    document.getElementById('presetsJson').addEventListener('input', () => {
-        refreshPresetsFromUI();
-    });
-
+    document.getElementById('presetsJson').addEventListener('input', () => refreshPresetsFromUI());
     updateStyleSelect();
     applyStyle(document.getElementById('activeStyle').value);
 };
@@ -51,11 +44,11 @@ function toggleDarkMode() {
 
 function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
 
+// --- List & Modal Logic ---
+
 function checkUnsaved(id) {
     const status = document.getElementById('status_' + id);
-    if (lastSynced[id] === null) {
-        status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; return;
-    }
+    if (lastSynced[id] === null) { status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; return; }
     const current = document.getElementById(id).value.trim(); 
     const last = (lastSynced[id] || "").trim();
     if (last === "") { status.innerText = "☁️ 未読込"; status.className = "list-status status-init"; }
@@ -70,60 +63,30 @@ function onListInput(id) {
     checkConflicts();
 }
 
-function checkConflicts() {
-    const alertBox = document.getElementById('conflictAlert');
-    if(alertBox) alertBox.style.display = 'none';
-}
-
-function filterList() {
-    const query = document.getElementById('search_whitelist').value.toLowerCase();
-    const textArea = document.getElementById('whitelist');
-    if (query === "") { textArea.value = masterWhitelist.join('\n'); textArea.readOnly = false; textArea.style.opacity = "1"; }
-    else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
-}
-
-// --- Modal Functions ---
-
-function openModal(targetId, title) {
-    currentModalTargetId = targetId;
+function openModal(id, title) {
+    currentEditId = id;
     document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalTextarea').value = document.getElementById(targetId).value;
-    document.getElementById('editorModal').classList.add('active');
+    document.getElementById('modalTextarea').value = document.getElementById(id).value;
+    document.getElementById('editorModal').style.display = 'block';
 }
 
 function closeModal() {
-    document.getElementById('editorModal').classList.remove('active');
-    currentModalTargetId = null;
+    document.getElementById('editorModal').style.display = 'none';
+    currentEditId = null;
 }
 
 function saveModal() {
-    if(currentModalTargetId) {
+    if(currentEditId) {
         const val = document.getElementById('modalTextarea').value;
-        document.getElementById(currentModalTargetId).value = val;
-        // Trigger input event logic
-        if(currentModalTargetId === 'presetsJson') refreshPresetsFromUI();
-        else onListInput(currentModalTargetId);
+        document.getElementById(currentEditId).value = val;
+        onListInput(currentEditId);
+        if(currentEditId === 'presetsJson') refreshPresetsFromUI();
     }
     closeModal();
 }
 
-function sortModalList() {
-    const txt = document.getElementById('modalTextarea');
-    const lines = txt.value.split('\n').filter(s => s.trim() !== "");
-    // Simple sort for now, advanced sort could be added
-    lines.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    txt.value = lines.join('\n');
-}
-
-function uniqueModalList() {
-    const txt = document.getElementById('modalTextarea');
-    const lines = txt.value.split('\n').map(s => s.trim()).filter(s => s !== "");
-    const unique = Array.from(new Set(lines));
-    txt.value = unique.join('\n');
-}
-
-// --- JSON & Style Management ---
-
+// --- JSON & Style Management (Same as v30.7) ---
+// (Logic retained to ensure data integrity)
 function jsonToText(jsonStr, updateGlobal = true) {
     try {
         const obj = JSON.parse(jsonStr);
@@ -133,7 +96,7 @@ function jsonToText(jsonStr, updateGlobal = true) {
             text += `[${style}]\n`;
             const rules = obj[style].rules ? obj[style].rules : obj[style];
             if (typeof rules === 'object') {
-                for (let from in rules) { text += `${from} > ${rules[from]}\n`; }
+                for (let from in rules) text += `${from} > ${rules[from]}\n`;
             }
             text += "\n";
         }
@@ -148,20 +111,15 @@ function textToJson(text) {
     let curStyle = null;
     lines.forEach(l => {
         l = l.trim(); if (!l) return;
-        if (l.startsWith('[') && l.endsWith(']')) { 
-            curStyle = l.slice(1, -1); newRulesMap[curStyle] = {}; 
-        } else if (curStyle && l.includes('>')) { 
-            const p = l.split('>').map(s => s.trim()); 
-            if (p.length === 2) newRulesMap[curStyle][p[0]] = p[1]; 
-        }
+        if (l.startsWith('[') && l.endsWith(']')) { curStyle = l.slice(1, -1); newRulesMap[curStyle] = {}; } 
+        else if (curStyle && l.includes('>')) { const p = l.split('>').map(s => s.trim()); if (p.length === 2) newRulesMap[curStyle][p[0]] = p[1]; }
     });
     let finalObj = JSON.parse(JSON.stringify(loadedPresetsData)); 
     for (let styleName in newRulesMap) {
-        if (!finalObj[styleName]) {
-            finalObj[styleName] = { rules: newRulesMap[styleName], options: {}, _meta: { created: new Date().toISOString() } };
-        } else {
+        if (!finalObj[styleName]) { finalObj[styleName] = { rules: newRulesMap[styleName], options: {}, _meta: { created: new Date().toISOString() } }; } 
+        else {
             if (finalObj[styleName].rules) finalObj[styleName].rules = newRulesMap[styleName];
-            else finalObj[styleName] = { rules: newRulesMap[styleName], options: finalObj[styleName].options || {}, _meta: finalObj[styleName]._meta || {} };
+            else { const saved = finalObj[styleName]; finalObj[styleName] = { rules: newRulesMap[styleName], options: saved.options||{}, _meta: saved._meta||{} }; }
         }
     }
     for (let key in finalObj) { if (!newRulesMap[key]) delete finalObj[key]; }
@@ -169,12 +127,8 @@ function textToJson(text) {
 }
 
 function refreshPresetsFromUI() {
-    const text = document.getElementById('presetsJson').value;
-    try {
-        const jsonStr = textToJson(text);
-        loadedPresetsData = JSON.parse(jsonStr);
-        updateStyleSelect();
-    } catch(e) { console.error("Hot-reload error:", e); }
+    try { const jsonStr = textToJson(document.getElementById('presetsJson').value); loadedPresetsData = JSON.parse(jsonStr); updateStyleSelect(); } 
+    catch(e) { console.error("Hot-reload error:", e); }
 }
 
 function updateStyleSelect(dataObj) {
@@ -184,73 +138,64 @@ function updateStyleSelect(dataObj) {
     const data = dataObj || loadedPresetsData;
     select.innerHTML = '<option value="none">なし (単純整形のみ)</option>';
     if (!data) return;
-    Object.keys(data).forEach(style => {
-        const opt = document.createElement('option');
-        opt.value = style; opt.innerText = style; select.appendChild(opt);
-    });
+    Object.keys(data).forEach(style => { const opt = document.createElement('option'); opt.value = style; opt.innerText = style; select.appendChild(opt); });
     if (Object.keys(data).includes(currentVal)) select.value = currentVal;
-    if (select.value === 'none') {
-        if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
-    } else {
-        if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${select.value}] を更新`; }
-    }
+    
+    if (select.value === 'none') { if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; } } 
+    else { if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${select.value}] を更新`; } }
 }
 
 function applyStyle(styleName) {
     const infoSpan = document.getElementById('styleInfo');
     const btnUpdate = document.getElementById('btnUpdateStyle');
     const isNone = styleName === 'none';
-    OPT_KEYS.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) { el.disabled = isNone; el.style.opacity = isNone ? "0.5" : "1"; }
-    });
-    if (isNone) {
-        if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
-    } else {
-        if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${styleName}] を更新`; }
-    }
+    
+    OPT_KEYS.forEach(id => { const el = document.getElementById(id); if(el) { el.disabled = isNone; el.style.opacity = isNone ? "0.5" : "1"; } });
+    if (isNone) { if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; } } 
+    else { if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${styleName}] を更新`; } }
+
     if (isNone || !loadedPresetsData[styleName]) { infoSpan.innerText = ""; return; }
     const styleData = loadedPresetsData[styleName];
     if (styleData.options && Object.keys(styleData.options).length > 0) {
         let appliedCount = 0;
-        for (let key in styleData.options) {
-            const el = document.getElementById(key);
-            if (el) { el.value = styleData.options[key]; el.dispatchEvent(new Event('change')); appliedCount++; }
-        }
+        for (let key in styleData.options) { const el = document.getElementById(key); if (el) { el.value = styleData.options[key]; el.dispatchEvent(new Event('change')); appliedCount++; } }
         infoSpan.innerText = `✅ ${appliedCount}個のオプションを適用`;
     } else { infoSpan.innerText = "ℹ️ オプション設定なし (辞書のみ)"; }
-}
-
-function getCurrentOptions() {
-    const currentOptions = {};
-    OPT_KEYS.forEach(k => { const el = document.getElementById(k); if(el) currentOptions[k] = el.value; });
-    return currentOptions;
 }
 
 function updateCurrentStyle() {
     const name = document.getElementById('activeStyle').value;
     if (name === 'none' || !loadedPresetsData[name]) return;
-    loadedPresetsData[name].options = getCurrentOptions();
+    loadedPresetsData[name].options = {};
+    OPT_KEYS.forEach(k => { const el = document.getElementById(k); if(el) loadedPresetsData[name].options[k] = el.value; });
     loadedPresetsData[name]._meta.updated = new Date().toISOString();
-    const textArea = document.getElementById('presetsJson');
-    textArea.value = jsonToText(JSON.stringify(loadedPresetsData));
+    document.getElementById('presetsJson').value = jsonToText(JSON.stringify(loadedPresetsData));
     lastSynced['presetsJson'] = null; checkUnsaved('presetsJson');
-    alert(`スタイル "${name}" のオプション設定を更新しました。`);
+    alert(`スタイル "${name}" の設定を更新しました。`);
 }
 
 function createNewStyle() {
     const name = document.getElementById('newStyleName').value.trim();
     if (!name) { alert("スタイル名を入力してください"); return; }
     if (loadedPresetsData[name]) { alert(`スタイル "${name}" は既に存在します。`); return; }
-    loadedPresetsData[name] = { rules: {}, options: getCurrentOptions(), _meta: { created: new Date().toISOString() } };
+    const opts = {}; OPT_KEYS.forEach(k => { const el = document.getElementById(k); if(el) opts[k] = el.value; });
+    loadedPresetsData[name] = { rules: {}, options: opts, _meta: { created: new Date().toISOString() } };
     const textArea = document.getElementById('presetsJson');
     textArea.value += `\n[${name}]\n`; textArea.value = jsonToText(JSON.stringify(loadedPresetsData));
     lastSynced['presetsJson'] = null; checkUnsaved('presetsJson');
-    updateStyleSelect(); document.getElementById('activeStyle').value = name; applyStyle(name); 
+    updateStyleSelect(); document.getElementById('activeStyle').value = name; applyStyle(name);
     alert(`新規スタイル "${name}" を作成しました。`);
 }
 
-function suggestRules() {
+// --- Sync & Helper ---
+function checkConflicts() { const alertBox = document.getElementById('conflictAlert'); if(alertBox) alertBox.style.display = 'none'; }
+function filterList() {
+    const query = document.getElementById('search_whitelist').value.toLowerCase();
+    const textArea = document.getElementById('whitelist');
+    if (query === "") { textArea.value = masterWhitelist.join('\n'); textArea.readOnly = false; textArea.style.opacity = "1"; }
+    else { textArea.value = masterWhitelist.filter(line => line.toLowerCase().includes(query)).join('\n'); textArea.readOnly = true; textArea.style.opacity = "0.7"; }
+}
+function suggestRules() { /* Same as v30.7 */ 
     const out = document.getElementById('output').innerText; if(!out) { alert("まずは整形を実行してください。"); return; }
     const matches = out.match(/[ァ-ヶー]{3,}/g) || [];
     const rules = []; const seen = new Set();
@@ -266,13 +211,11 @@ function suggestRules() {
         panel.style.display = 'block';
     } else { alert("候補は見つかりませんでした。"); }
 }
-
 function applySuggestions() {
     const area = document.getElementById('replaceList');
     currentSuggestions.forEach((rule, i) => { if (document.getElementById(`rule_${i}`).checked) area.value += (area.value ? '\n' : '') + rule; });
     document.getElementById('assistPanel').style.display = 'none'; checkUnsaved('replaceList');
 }
-
 async function syncList(fileName, elementId) {
     const token = document.getElementById('githubToken').value;
     const user = document.getElementById('githubUser').value;
@@ -284,8 +227,8 @@ async function syncList(fileName, elementId) {
         const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
         if (res.ok) {
             const data = await res.json();
-            let remoteJsonRaw = decodeURIComponent(escape(atob(data.content))); 
-            let displayContent = remoteJsonRaw; 
+            let remoteJsonRaw = decodeURIComponent(escape(atob(data.content)));
+            let displayContent = remoteJsonRaw;
             if (elementId === 'presetsJson') displayContent = jsonToText(remoteJsonRaw, false);
             else {
                 const lines = (remoteJsonRaw.includes(',') && !remoteJsonRaw.includes('\n')) ? remoteJsonRaw.split(',').map(s=>s.trim()) : remoteJsonRaw.split('\n').map(s=>s.trim());
@@ -295,17 +238,17 @@ async function syncList(fileName, elementId) {
             }
             if (textArea.value.trim() !== "" && (textArea.value.trim() !== displayContent.trim() || lastSynced[elementId] === null)) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
-                    let finalToSave = textArea.value; let finalJsonStr = textArea.value; 
-                    if (elementId === 'presetsJson') { finalJsonStr = textToJson(textArea.value); finalToSave = finalJsonStr; }
+                    let finalToSave = textArea.value; 
+                    if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value);
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
-                    alert("保存完了"); displayContent = textArea.value; if (elementId === 'presetsJson') remoteJsonRaw = finalJsonStr;
+                    alert("保存完了"); displayContent = textArea.value; 
+                    if (elementId === 'presetsJson') remoteJsonRaw = finalToSave;
                 }
             }
             textArea.value = displayContent; lastSynced[elementId] = displayContent; 
             if(elementId === 'presetsJson') jsonToText(remoteJsonRaw, true);
-            checkUnsaved(elementId); alert("同期完了");
-            if(elementId !== 'presetsJson') checkConflicts();
+            checkUnsaved(elementId); alert("同期完了"); if(elementId !== 'presetsJson') checkConflicts();
         } else if(res.status === 404) {
              if(confirm(`ファイル ${fileName} が見つかりません。新規作成しますか？`)) {
                  let content = textArea.value; if (elementId === 'presetsJson') content = "{}";
@@ -317,22 +260,14 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- v31.0 Core Logic ---
+// --- v31.0 Core Logic: Ghost Buster & Solid State ---
 
-function getFuzzyRegExp(word) {
-    if (!word) return null;
-    const chars = word.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
-    const pattern = chars.join('[\\s\\n]*');
-    return new RegExp(pattern, 'gi');
-}
-
-// v31.0 New Feature: Ignore spaces in key for matching (Canonicalization)
-function getFlexibleRegExp(word) {
-    if (!word) return null;
-    // Remove all spaces from the dictionary key first
-    const cleanWord = word.replace(/\s+/g, '');
-    const chars = cleanWord.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
-    // Insert flexible space matcher between characters
+// Updated: Generates fuzzy regex for already cleaned text (key's spaces are removed)
+function getFuzzyRegExp(cleanKey) {
+    if (!cleanKey) return null;
+    // Input 'cleanKey' is assumed to have NO spaces.
+    // We match it against text that might have newlines or slight debris (though Phase 1 cleans most).
+    const chars = cleanKey.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
     const pattern = chars.join('[\\s\\n]*');
     return new RegExp(pattern, 'gi');
 }
@@ -343,73 +278,103 @@ function processText() {
     const activeStyle = document.getElementById('activeStyle').value;
     const config = {}; OPT_KEYS.forEach(id => config[id] = document.getElementById(id).value);
 
-    // Step 0: Prep
+    // --- Phase 0: Pre-processing & Protection ---
     text = text.replace(/\r\n/g, '\n').replace(/[\t\u00A0]/g, ' ').replace(/[ 　]+\n/g, '\n');
     let hasStartSpace = text.startsWith('　');
     if (hasStartSpace) text = '___S_Z_SP___' + text.slice(1);
 
     const protectedItems = [];
-    text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => { const p = `___P_URL_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p; });
-    text = text.replace(/\d{1,2}:\d{2}/g, (m) => { const p = `___P_TIME_${protectedItems.length}___`; protectedItems.push({p, val: m}); return p; });
+    const protect = (val, type) => {
+        const p = `___P_${type}_${protectedItems.length}___`;
+        protectedItems.push({p, val, isDiff: false});
+        return p;
+    };
+    
+    // Protect URL, Time, Paragraphs
+    text = text.replace(/https?:\/\/[\w!\?\/+\-_~=;\.,\*&@#\$%\(\)'\[\]]+/g, (m) => protect(m, 'URL'));
+    text = text.replace(/\d{1,2}:\d{2}/g, (m) => protect(m, 'TIME'));
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // Step 1: Company List (Box 1)
-    const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    companyList.forEach(line => {
-        let targets = []; let replacement = ""; let shouldProtect = false;
-        if (line.includes('>')) {
-            const parts = line.split('>'); replacement = parts[1].trim();
-            if (activeStyle === 'none') { targets = [replacement]; shouldProtect = true; } 
-            else { targets = parts[0].split(',').map(s => s.trim()).filter(s => s); targets.push(replacement); }
-        } else {
-            replacement = line; targets = [line]; if (activeStyle === 'none') shouldProtect = true;
-        }
-        targets.forEach(src => {
-            const regex = getFuzzyRegExp(src); // Box 1 uses fuzzy match but respects spaces in source definition (mostly)
-            if (!regex) return;
-            text = text.replace(regex, (match) => {
-                if (match.includes('___P_')) return match;
-                if (shouldProtect) {
-                    const p = `___P_WL_CMP_${Math.random().toString(36).slice(-2)}___`;
-                    protectedItems.push({p, val: replacement}); return p;
-                }
-                return replacement;
+    // --- Phase 1: Ghost Buster (The Cleaner) ---
+    // Remove spaces between alphanumeric characters.
+    // This creates the "Virtual Original". No Diff tags generated here.
+    // e.g. "G a r a x y" -> "Garaxy", "O r a n g e" -> "Orange", "GaN HEMT" -> "GaNHEMT"
+    let prevText;
+    do {
+        prevText = text;
+        text = text.replace(/([a-zA-Z0-9]) +([a-zA-Z0-9])/g, '$1$2');
+    } while (text !== prevText);
+
+
+    // --- Phase 2: Box 1 (Cleansing) ---
+    // Condition: Only if style is NOT none.
+    if (activeStyle !== 'none') {
+        const companyList = document.getElementById('companyList').value.split('\n').map(s=>s.trim()).filter(s=>s);
+        companyList.forEach(line => {
+            let targets = [];
+            let replacement = "";
+            if (line.includes('>')) {
+                const parts = line.split('>');
+                replacement = parts[1].trim();
+                targets = parts[0].split(',').map(s => s.trim()).filter(s => s);
+            } else {
+                replacement = line; targets = [line]; // Self-correction
+            }
+            targets.forEach(src => {
+                // Remove spaces from key for matching against Ghost-Busted text
+                const cleanKey = src.replace(/\s+/g, '');
+                const regex = getFuzzyRegExp(cleanKey);
+                if (!regex) return;
+                text = text.replace(regex, (match) => {
+                    if (match.includes('___P_')) return match;
+                    // Diff generation
+                    const p = `___P_B1_${protectedItems.length}___`;
+                    // If match differs from replacement, show Diff. 
+                    // Note: match is Ghost-Busted text.
+                    const val = (isCompare && match !== replacement) ? `${match}【>${replacement}】` : replacement;
+                    protectedItems.push({p, val: val, isDiff: true});
+                    return p;
+                });
             });
         });
-    });
+    }
 
-    // Step 2: Whitelist (Box 2) - v31.0 Canonicalization
+    // --- Phase 3: Box 2 (Canonicalization / Absolute Protection) ---
+    // Always runs. Enforces dictionary spacing.
+    // e.g. Input(Cleaned): "GaNHEMT" -> Dictionary: "GaN HEMT" -> Output: "GaN HEMT"
     const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
-    whitelist.forEach((word, i) => {
-        // v31.0: Use flexible regex (ignores spaces in dictionary word for matching pattern)
-        const regex = getFlexibleRegExp(word);
+    whitelist.forEach((word) => {
+        const cleanKey = word.replace(/\s+/g, '');
+        const regex = getFuzzyRegExp(cleanKey);
         if (!regex) return;
         text = text.replace(regex, (match) => {
             if (match.includes('___P_')) return match;
-            // Force replace with dictionary defined word (canonical restoration)
-            const target = word; 
-            const val = (isCompare && match !== target) ? (match.includes('\n') ? target : `${match}【>${target}】`) : target;
-            const p = `___P_WL_${i}_${Math.random().toString(36).slice(-2)}___`;
-            protectedItems.push({p, val: val}); 
+            
+            // Logic:
+            // If activeStyle is none -> Silent fix (no diff tag).
+            // If activeStyle is set -> Show Diff if changed.
+            
+            let finalVal = word;
+            if (isCompare && activeStyle !== 'none') {
+                 // Check if match (cleaned text) is different from target (word with spaces)
+                 // "GaNHEMT" !== "GaN HEMT" -> True
+                 if (match !== word) {
+                     finalVal = `${match}【>${word}】`;
+                 }
+            }
+            // If activeStyle is none, finalVal remains 'word' (clean fix).
+            
+            const p = `___P_WL_${protectedItems.length}___`;
+            protectedItems.push({p, val: finalVal, isDiff: false}); 
             return p;
         });
     });
 
-    // Step 2.5: Ghost Buster (v31.0 New Logic)
-    // Remove spaces between alphanumeric characters that were NOT protected by Box 2
-    let prevText = "";
-    while (text !== prevText) {
-        prevText = text;
-        // Find [AlphaNum] [Spaces] [AlphaNum] and remove spaces.
-        // Protection tokens (___P_...) consist of _, P, WL, etc. 
-        // We must ensure we don't merge across token boundaries if they look like alphanum (they shouldn't due to underscores).
-        text = text.replace(/([a-zA-Z0-9])[\s\n]+([a-zA-Z0-9])/g, '$1$2');
-    }
-
+    // Remove remaining newlines for replacement phase
     text = text.replace(/\n/g, ''); 
 
-    // Step 3: Replace (Box 3 & 4)
+    // --- Phase 4: Box 3 & 4 (Replacement) ---
     if (activeStyle !== 'none') {
         let allRules = [];
         document.getElementById('replaceList').value.split('\n').forEach(line => {
@@ -435,7 +400,7 @@ function processText() {
         const occurrenceMap = new Map();
         let prefixPattern = "[台豪米独仏日英韓中]*";
         
-        allRules.forEach((rule, idx) => {
+        allRules.forEach((rule) => {
             if (!rule.from) return;
             const fuzzyKey = rule.from.split('').map(c => c.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('[\\s\\n]*');
             const regex = new RegExp(`${prefixPattern}${fuzzyKey}`, 'gi');
@@ -444,43 +409,38 @@ function processText() {
                 const count = (occurrenceMap.get(rule.from) || 0) + 1; occurrenceMap.set(rule.from, count);
                 let targetTo = rule.to.includes('|') ? (count === 1 ? rule.to.split('|')[0].trim() : rule.to.split('|')[1].trim()) : rule.to;
                 if (match === targetTo) return match;
-                const result = isCompare ? `${match}【>${targetTo}】` : targetTo;
-                const p = `___P_RV_${idx}_${Math.random().toString(36).slice(-2)}___`;
-                protectedItems.push({p, val: result}); return p;
+                
+                const val = isCompare ? `${match}【>${targetTo}】` : targetTo;
+                const p = `___P_RV_${protectedItems.length}___`;
+                protectedItems.push({p, val: val, isDiff: true});
+                return p;
             });
         });
-    }
 
-    // Step 4: Formatting (Box 4)
-    if (activeStyle !== 'none') {
+        // --- Phase 5: Symbols & Formatting ---
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
 
-        const replaceSymWithDiff = (regex, target) => { text = text.replace(regex, (m) => (m.includes('___P_') || m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); };
-        replaceSymWithDiff(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
-        replaceSymWithDiff(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
-        replaceSymWithDiff(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!');
-        replaceSymWithDiff(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?');
-        replaceSymWithDiff(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
+        const replaceSym = (regex, target) => { 
+            text = text.replace(regex, (m) => (m.includes('___P_') || m.trim() === target) ? m : (isCompare ? `${m}【>${target}】` : target)); 
+        };
+        
+        if (config.opt_percent) replaceSym(/[％%]/g, config.opt_percent === 'zen' ? '％' : '%');
+        if (config.opt_ampersand) replaceSym(/[＆&]/g, config.opt_ampersand === 'zen' ? '＆' : '&');
+        if (config.opt_mark) { replaceSym(/[！!]/g, config.opt_mark === 'zen' ? '！' : '!'); replaceSym(/[？?]/g, config.opt_mark === 'zen' ? '？' : '?'); }
+        if (config.opt_colon) replaceSym(/[：:]/g, config.opt_colon === 'zen' ? '：' : ':');
+        
         const tOpen = config.opt_bracket === 'zen' ? '（' : '('; const tClose = config.opt_bracket === 'zen' ? '）' : ')';
         text = text.replace(/[\(\)（）]/g, (m) => {
             if (m.includes('___P_')) return m;
             const t = (m === '(' || m === '（') ? tOpen : tClose; return (m === t) ? m : (isCompare ? `${m}【>${t}】` : t);
         });
 
-        if (config.opt_punctuation === 'ten_maru') {
-            replaceSymWithDiff(/[，,]/g, '、');
-            replaceSymWithDiff(/[．\.]/g, '。');
-        } else if (config.opt_punctuation === 'comma_maru') {
-            replaceSymWithDiff(/、/g, '，');
-            replaceSymWithDiff(/[．\.]/g, '。');
-        } else if (config.opt_punctuation === 'comma_period') {
-            replaceSymWithDiff(/、/g, '，');
-            replaceSymWithDiff(/[。]/g, '．'); 
-            replaceSymWithDiff(/\./g, '．'); 
-        }
+        if (config.opt_punctuation === 'ten_maru') { replaceSym(/[，,]/g, '、'); replaceSym(/[．\.]/g, '。'); } 
+        else if (config.opt_punctuation === 'comma_maru') { replaceSym(/、/g, '，'); replaceSym(/[．\.]/g, '。'); } 
+        else if (config.opt_punctuation === 'comma_period') { replaceSym(/、/g, '，'); replaceSym(/[。]/g, '．'); replaceSym(/\./g, '．'); }
 
         const waveChar = config.opt_wave === 'tilde' ? '～' : '〜';
-        replaceSymWithDiff(/[〜～]/g, waveChar);
+        replaceSym(/[〜～]/g, waveChar);
         
         if (config.opt_mark_space !== 'keep') {
             const markSpaceChar = config.opt_mark_space === 'force' ? '　' : '';
@@ -489,18 +449,24 @@ function processText() {
                 const target = m1 + markSpaceChar + nextChar; return isCompare ? `${match}【>${target}】` : target;
             });
         }
-        
         text = text.replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
         text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
     }
 
+    // --- Restoration ---
     text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
-    for (let i = protectedItems.length - 1; i >= 0; i--) { text = text.split(protectedItems[i].p).join(protectedItems[i].val); }
+    for (let i = protectedItems.length - 1; i >= 0; i--) { 
+        text = text.split(protectedItems[i].p).join(protectedItems[i].val); 
+    }
+    
+    // Ghost Buster might have left no text if input was just spaces? No, logic preserves chars.
+    
     text = text.replace(/\n{3,}/g, '\n\n').trim();
     if (hasStartSpace) text = '　' + text.replace(/^___S_Z_SP___/, '');
 
     if (isCompare) document.getElementById('output').innerHTML = text.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
     else document.getElementById('output').innerText = text;
+    
     let zenCount = 0; for (let i = 0; i < text.length; i++) {
         const c = text.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
     }
