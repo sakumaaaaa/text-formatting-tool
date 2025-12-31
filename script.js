@@ -1,5 +1,5 @@
 // v31.0 Guardian Script
-// Implementation: Ghost Buster (Full Spectrum) & Solid State Architecture
+// Implementation: Ghost Buster (Full Noise Cancellation) & Round Trip Logic
 
 const OPT_KEYS = ['opt_percent','opt_ampersand','opt_bracket','opt_colon','opt_punctuation','opt_quote','opt_wave','opt_mark','opt_dash','opt_hyphen','opt_slash','opt_equal', 'opt_mark_space'];
 let lastSynced = {}; 
@@ -44,7 +44,17 @@ function toggleDarkMode() {
 
 function copyToClipboard() { const text = document.getElementById('output').innerText; if (!text) return; navigator.clipboard.writeText(text).then(() => alert("コピー完了！")); }
 
-// --- List & Modal Logic ---
+// --- List & Modal Logic with Auto-Sort ---
+
+function formatListData(text) {
+    // Split, Trim, Unique, Sort (Alphabetical Ascending)
+    if (!text) return "";
+    const lines = text.split('\n').map(s => s.trim()).filter(s => s !== "");
+    const uniqueLines = Array.from(new Set(lines));
+    // Sort logic: A-Z
+    uniqueLines.sort((a, b) => a.localeCompare(b, 'ja', { sensitivity: 'base' }));
+    return uniqueLines.join('\n');
+}
 
 function checkUnsaved(id) {
     const status = document.getElementById('status_' + id);
@@ -77,7 +87,11 @@ function closeModal() {
 
 function saveModal() {
     if(currentEditId) {
-        const val = document.getElementById('modalTextarea').value;
+        let val = document.getElementById('modalTextarea').value;
+        // Apply Format (Sort & Clean) on Save from Modal
+        if (currentEditId !== 'presetsJson') { // Presets is JSON, handled differently
+            val = formatListData(val);
+        }
         document.getElementById(currentEditId).value = val;
         onListInput(currentEditId);
         if(currentEditId === 'presetsJson') refreshPresetsFromUI();
@@ -86,6 +100,7 @@ function saveModal() {
 }
 
 // --- JSON & Style Management ---
+
 function jsonToText(jsonStr, updateGlobal = true) {
     try {
         const obj = JSON.parse(jsonStr);
@@ -222,6 +237,13 @@ async function syncList(fileName, elementId) {
     const textArea = document.getElementById(elementId);
     if(!token || !user || !repo) { alert("同期設定が必要です"); return; }
     const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
+    
+    // Auto-Format on Sync
+    if (elementId !== 'presetsJson') {
+        const formatted = formatListData(textArea.value);
+        textArea.value = formatted;
+    }
+
     try {
         const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
         if (res.ok) {
@@ -230,8 +252,8 @@ async function syncList(fileName, elementId) {
             let displayContent = remoteJsonRaw;
             if (elementId === 'presetsJson') displayContent = jsonToText(remoteJsonRaw, false);
             else {
-                const lines = (remoteJsonRaw.includes(',') && !remoteJsonRaw.includes('\n')) ? remoteJsonRaw.split(',').map(s=>s.trim()) : remoteJsonRaw.split('\n').map(s=>s.trim());
-                displayContent = Array.from(new Set(lines)).filter(s=>s!=="").join('\n');
+                // Also sort/clean display content from remote
+                displayContent = formatListData(remoteJsonRaw);
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
             }
@@ -259,7 +281,7 @@ async function syncList(fileName, elementId) {
     } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
 }
 
-// --- v31.0 Core Logic: Ghost Buster (Full Spectrum) ---
+// --- v31.0 Core Logic: Ghost Buster (Full Noise Cancellation) ---
 
 function getFuzzyRegExp(cleanKey) {
     if (!cleanKey) return null;
@@ -292,18 +314,19 @@ function processText() {
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
     // --- Phase 1: Ghost Buster (Full Spectrum) ---
-    // Remove "ghost spaces" to create the Virtual Original.
-    // 1. [AlphaNum] [Space] [AlphaNum]  (e.g. G a r a x y -> Garaxy)
-    // 2. [Non-ASCII] [Space] [AlphaNum] (e.g. 2020 年 -> 2020年)
-    // 3. [AlphaNum] [Space] [Non-ASCII] (e.g. Intel の -> Intelの)
+    // Remove "ghost spaces/newlines" to create the Virtual Original.
+    // Includes: Alpha-Alpha, Jap-Alpha, Alpha-Jap
+    // Target: space and \n
     let prevText;
     do {
         prevText = text;
-        text = text.replace(/([a-zA-Z0-9]) +([a-zA-Z0-9])/g, '$1$2'); // Alpha-Alpha
-        text = text.replace(/([^\x00-\x7F]) +([a-zA-Z0-9])/g, '$1$2'); // Jap-Alpha
-        text = text.replace(/([a-zA-Z0-9]) +([^\x00-\x7F])/g, '$1$2'); // Alpha-Jap
+        text = text.replace(/([a-zA-Z0-9])[\s\n]+([a-zA-Z0-9])/g, '$1$2'); // Alpha-Alpha
+        text = text.replace(/([^\x00-\x7F])[\s\n]+([a-zA-Z0-9])/g, '$1$2'); // Jap-Alpha
+        text = text.replace(/([a-zA-Z0-9])[\s\n]+([^\x00-\x7F])/g, '$1$2'); // Alpha-Jap
     } while (text !== prevText);
 
+    // Capture Virtual Original (Ghost Buster Applied, No Diff Tags)
+    const virtualOriginal = text;
 
     // --- Phase 2: Box 1 (Cleansing) ---
     if (activeStyle !== 'none') {
@@ -325,6 +348,7 @@ function processText() {
                 text = text.replace(regex, (match) => {
                     if (match.includes('___P_')) return match;
                     const p = `___P_B1_${protectedItems.length}___`;
+                    // Compare against cleaned match (Virtual Original part)
                     const val = (isCompare && match !== replacement) ? `${match}【>${replacement}】` : replacement;
                     protectedItems.push({p, val: val, isDiff: true});
                     return p;
@@ -334,7 +358,10 @@ function processText() {
     }
 
     // --- Phase 3: Box 2 (Canonicalization / Absolute Protection) ---
+    // Always runs. Sort by Length Descending for better matching
     const whitelist = document.getElementById('whitelist').value.split('\n').map(s=>s.trim()).filter(s=>s);
+    whitelist.sort((a, b) => b.length - a.length); // Internal logic sort
+
     whitelist.forEach((word) => {
         const cleanKey = word.replace(/\s+/g, '');
         const regex = getFuzzyRegExp(cleanKey);
@@ -343,6 +370,7 @@ function processText() {
             if (match.includes('___P_')) return match;
             
             let finalVal = word;
+            // Diff only if style is NOT none and match differs from canonical word
             if (isCompare && activeStyle !== 'none') {
                  if (match !== word) {
                      finalVal = `${match}【>${word}】`;
@@ -350,7 +378,8 @@ function processText() {
             }
             
             const p = `___P_WL_${protectedItems.length}___`;
-            protectedItems.push({p, val: finalVal, isDiff: false}); 
+            protectedItems.push({p, val: finalVal, isDiff: false}); // Box 2 itself doesn't mark isDiff for RoundTrip? Actually if it changes, it should be part of diff.
+            // But RoundTrip check uses finalCleanText.
             return p;
         });
     });
@@ -436,22 +465,78 @@ function processText() {
         text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
     }
 
-    // --- Restoration ---
+    // --- Restoration & Round Trip Logic ---
     text = text.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
+    
+    // Construct final text WITHOUT Diff tags for validation
+    let finalCleanText = text;
     for (let i = protectedItems.length - 1; i >= 0; i--) { 
-        text = text.split(protectedItems[i].p).join(protectedItems[i].val); 
+        // Restore with PURE value (no diff tags)
+        let val = protectedItems[i].val;
+        if (val.includes('【>')) {
+            val = val.replace(/.*?【>(.*?)】/g, '$1');
+        }
+        finalCleanText = finalCleanText.split(protectedItems[i].p).join(val);
     }
     
-    text = text.replace(/\n{3,}/g, '\n\n').trim();
-    if (hasStartSpace) text = '　' + text.replace(/^___S_Z_SP___/, '');
+    // Construct text WITH Diff tags for display
+    let finalText = text;
+    for (let i = protectedItems.length - 1; i >= 0; i--) { 
+        finalText = finalText.split(protectedItems[i].p).join(protectedItems[i].val); 
+    }
 
-    if (isCompare) document.getElementById('output').innerHTML = text.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
-    else document.getElementById('output').innerText = text;
+    finalCleanText = finalCleanText.replace(/\n{3,}/g, '\n\n').trim();
+    finalText = finalText.replace(/\n{3,}/g, '\n\n').trim();
+
+    // Round Trip Check:
+    // If virtualOriginal (ghost busted) === finalCleanText (processed result),
+    // then no meaningful changes happened. Suppress diff tags.
+    // However, we must ensure virtualOriginal also undergoes the same restoration of global protections (URL/TIME) if any were embedded?
+    // Actually virtualOriginal still has ___P_...___ tags in it.
+    // We need to restore tags in virtualOriginal to compare properly.
     
-    let zenCount = 0; for (let i = 0; i < text.length; i++) {
-        const c = text.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
+    let restoredVirtualOriginal = virtualOriginal.split('___P_ZPARA___').join('\n\n　').split('___P_DPARA___').join('\n\n');
+    for (let i = protectedItems.length - 1; i >= 0; i--) { 
+        // For virtualOriginal, we want the ORIGINAL capture, but protectedItems[i].val holds the REPLACED value.
+        // We can't use .val. We need the logic to be consistent.
+        // Actually, protectedItems are created sequentially.
+        // Since VirtualOriginal is captured BEFORE Box 1/2/3/4, it contains placeholders.
+        // Those placeholders correspond to items pushed BEFORE GhostBuster (URL, Time, Para).
+        // Items pushed AFTER (Box1,2,3,4) are NOT in virtualOriginal string yet (it has the text before replacement).
+        // Wait, GhostBuster runs -> virtualOriginal captured.
+        // Then Box 1 runs -> text changes, new tokens added.
+        // So virtualOriginal does NOT contain tokens from Box 1/2/3/4.
+        
+        // Therefore, we only need to restore tokens that existed AT THE TIME OF virtualOriginal capture.
+        // Those are indices 0 to (count of Phase 0 items).
+        // We can check protectedItems[i].p inside the string.
+        if (restoredVirtualOriginal.includes(protectedItems[i].p)) {
+            // Restore using the original captured value (URL/Time), which shouldn't have diff tags anyway.
+            let originalVal = protectedItems[i].val; 
+             if (originalVal.includes('【>')) originalVal = originalVal.replace(/.*?【>(.*?)】/g, '$1'); // Just in case
+            restoredVirtualOriginal = restoredVirtualOriginal.split(protectedItems[i].p).join(originalVal);
+        }
     }
-    document.getElementById('charCount').innerText = `文字数: ${text.length} | 全角換算: ${Math.ceil(zenCount)}`;
+    restoredVirtualOriginal = restoredVirtualOriginal.replace(/\n{3,}/g, '\n\n').trim();
+    if (hasStartSpace) {
+        finalCleanText = '　' + finalCleanText.replace(/^___S_Z_SP___/, '');
+        finalText = '　' + finalText.replace(/^___S_Z_SP___/, '');
+        restoredVirtualOriginal = '　' + restoredVirtualOriginal.replace(/^___S_Z_SP___/, '');
+    }
+
+    // FINAL DECISION
+    if (isCompare && restoredVirtualOriginal === finalCleanText) {
+        // Round trip detected! Force output to be clean text.
+        document.getElementById('output').innerText = finalCleanText;
+    } else {
+        if (isCompare) document.getElementById('output').innerHTML = finalText.replace(/【>(.*?)】/g, '<span class="diff-tag">【&gt;$1】</span>');
+        else document.getElementById('output').innerText = finalCleanText;
+    }
+    
+    let zenCount = 0; for (let i = 0; i < finalCleanText.length; i++) {
+        const c = finalCleanText.charCodeAt(i); if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c <= 0xff9f)) zenCount += 0.5; else zenCount += 1;
+    }
+    document.getElementById('charCount').innerText = `文字数: ${finalCleanText.length} | 全角換算: ${Math.ceil(zenCount)}`;
 }
 
 function downloadTxt() { const text = document.getElementById('output').innerText; if (!text) return; const blob = new Blob([text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cleaned_text.txt'; a.click(); }
