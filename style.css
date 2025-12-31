@@ -3,13 +3,11 @@
     --accent-blue: #1877f2; --accent-green: #42b72a; --accent-purple: #8e44ad; --accent-red: #fa3e3e; --accent-orange: #f39c12;
     --config-bg: #fff9db; --opt-bg: #f5f6f7;
     
-    /* List Box Colors (Light Mode) */
-    --box1-bg: #e3f2fd; --box1-border: #90caf9; /* English: Sky Blue */
-    --box2-bg: #f3e5f5; --box2-border: #ce93d8; /* Shield: Lavender */
-    --box3-bg: #ebfbee; --box3-border: #a5d6a7; /* Replace: Mint Green */
-    --box4-bg: #fff3e0; --box4-border: #ffcc80; /* Style: Orange */
+    --box1-bg: #e3f2fd; --box1-border: #90caf9;
+    --box2-bg: #f3e5f5; --box2-border: #ce93d8;
+    --box3-bg: #ebfbee; --box3-border: #a5d6a7;
+    --box4-bg: #fff3e0; --box4-border: #ffcc80;
     
-    /* Modal Colors */
     --modal-overlay: rgba(0, 0, 0, 0.5);
     --modal-bg: #ffffff;
 }
@@ -74,7 +72,6 @@ body.dark-mode #modeBtn { background: #f8f9fa; color: #343a40; }
 body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
 .counter-badge { font-size: 0.75rem; background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 10px; }
 
-/* Modal Styles */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: var(--modal-overlay); }
 .modal-content { background-color: var(--container-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 900px; height: 80%; border-radius: 8px; display: flex; flex-direction: column; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
