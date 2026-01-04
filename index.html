@@ -22,13 +22,10 @@
             <div>ユーザー: <input type="text" id="githubUser" value="sakumaaaaa" style="width:95%;" readonly></div>
             <div>リポジトリ: <input type="text" id="githubRepo" value="text-formatting-tool" style="width:95%;" readonly></div>
         </div>
-        <!-- ▼▼▼ 6.2節要件：セキュリティ警告の追加 ▼▼▼ -->
-        <div style="font-size: 0.8rem; color: #856404; background-color: #fff3cd; padding: 10px; margin: 0 15px 15px 15px; border-radius: 4px; border: 1px solid #ffeeba;">
-            <strong>⚠️ セキュリティ警告:</strong><br>
-            同期ボタンを押すと、設定・辞書データが<strong>外部サーバー（GitHub）へ送信・保存</strong>されます。<br>
-            機密情報の漏洩を防ぐため、<strong>Private（非公開）リポジトリ</strong>の使用を強く推奨します。
-        </div>
-        <!-- ▲▲▲ 追加ここまで ▲▲▲ -->
+        
+        <!-- ▼▼▼ 自動判定メッセージ表示エリア ▼▼▼ -->
+        <div id="repoStatus" style="display:none; margin: 0 15px 15px 15px; padding: 10px; border-radius: 4px; font-size: 0.8rem;"></div>
+        <!-- ▲▲▲ ここまで ▲▲▲ -->
     </details>
 
     <details id="listDetails" open>
