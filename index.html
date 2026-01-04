@@ -10,7 +10,7 @@
 <div class="container">
     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px;">
         <button id="modeBtn" class="header-btn">🌙 ダークモード</button>
-        <button id="clearBtn" class="header-btn">🗑️ 全削除</button>
+        <button id="clearBtn" class="header-btn">🗑️ テキスト消去</button>
     </div>
     
     <h1>テキスト整形くん 校閲Pro <span style="font-size:0.6em; color:var(--accent-blue); vertical-align:middle;">v31.1</span></h1>
@@ -19,8 +19,8 @@
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
             <div>トークン: <input type="password" id="githubToken" oninput="saveSettings()" style="width:100%;"></div>
-            <div>ユーザー: <input type="text" id="githubUser" oninput="saveSettings()" value="sakumaaaaa" style="width:100%;"></div>
-            <div>リポジトリ: <input type="text" id="githubRepo" oninput="saveSettings()" value="text-formatting-tool" style="width:100%;"></div>
+            <div>ユーザー: <input type="text" id="githubUser" value="sakumaaaaa" style="width:100%;" readonly></div>
+            <div>リポジトリ: <input type="text" id="githubRepo" value="text-formatting-tool" style="width:100%;" readonly></div>
         </div>
     </details>
 
