@@ -233,40 +233,72 @@ async function syncList(fileName, elementId) {
     if (elementId !== 'presetsJson') { textArea.value = formatListContent(textArea.value); }
     
     const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
-    try {
+  try {
         const res = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
+
         if (res.ok) {
+            // 1. 成功 (200 OK)
             const data = await res.json();
             let remoteJsonRaw = decodeURIComponent(escape(atob(data.content)));
             let displayContent = remoteJsonRaw;
-            if (elementId === 'presetsJson') displayContent = jsonToText(remoteJsonRaw, false);
-            else {
+            
+            if (elementId === 'presetsJson') {
+                displayContent = jsonToText(remoteJsonRaw, false);
+            } else {
                 displayContent = formatListContent(remoteJsonRaw);
                 if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
                 if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
             }
+
+            // 差分がある場合の更新処理
             if (textArea.value.trim() !== "" && (textArea.value.trim() !== displayContent.trim() || lastSynced[elementId] === null)) {
                 if (confirm("GitHubに保存（上書き）しますか？")) {
                     let finalToSave = textArea.value; 
                     if (elementId === 'presetsJson') finalToSave = textToJson(textArea.value);
+                    
                     await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ message: `Update ${fileName}`, content: btoa(unescape(encodeURIComponent(finalToSave))), sha: data.sha }) });
-                    alert("保存完了"); displayContent = textArea.value; 
+                    
+                    alert("保存完了"); 
+                    displayContent = textArea.value; 
                     if (elementId === 'presetsJson') remoteJsonRaw = finalToSave;
                 }
             }
-            textArea.value = displayContent; lastSynced[elementId] = displayContent; 
+            
+            textArea.value = displayContent; 
+            lastSynced[elementId] = displayContent; 
             if(elementId === 'presetsJson') jsonToText(remoteJsonRaw, true);
-            checkUnsaved(elementId); alert("同期完了"); if(elementId !== 'presetsJson') checkConflicts();
+            checkUnsaved(elementId); 
+            alert("同期完了"); 
+            if(elementId !== 'presetsJson') checkConflicts();
+
         } else if(res.status === 404) {
+             // 2. ファイルなし (404) -> 新規作成確認
              if(confirm(`ファイル ${fileName} が見つかりません。新規作成しますか？`)) {
-                 let content = textArea.value; if (elementId === 'presetsJson') content = "{}";
+                 let content = textArea.value; 
+                 if (elementId === 'presetsJson') content = "{}";
+                 
                  await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
                     body: JSON.stringify({ message: `Create ${fileName}`, content: btoa(unescape(encodeURIComponent(content))) }) });
-                 alert("ファイルを作成しました。"); lastSynced[elementId] = textArea.value; checkUnsaved(elementId);
+                 
+                 alert("ファイルを作成しました。"); 
+                 lastSynced[elementId] = textArea.value; 
+                 checkUnsaved(elementId);
              }
+
+        } else if (res.status === 401) {
+            // 3. 認証失敗 (401)
+            alert("認証に失敗しました（401）。\nトークンが正しいか、有効期限が切れていないか確認してください。");
+
+        } else {
+            // 4. その他のエラー (403, 500等)
+            alert(`エラーが発生しました（${res.status}）。\n設定を確認してください。`);
         }
-    } catch (e) { console.error(e); alert("同期エラー: " + e.message); }
+
+    } catch (e) { 
+        console.error(e); 
+        alert("同期エラー: " + e.message); 
+    } 
 }
 
 // --- v31.1 Core Logic ---
