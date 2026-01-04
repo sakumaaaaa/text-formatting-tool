@@ -1,4 +1,3 @@
-// storage.js
 import { OPT_KEYS } from './config.js';
 
 export function saveSettingsToLocal(token, user, repo) {
@@ -28,13 +27,19 @@ export function loadOptionsFromLocal() {
     });
 }
 
+// ▼▼▼ 修正箇所はこの関数です ▼▼▼
 export async function fetchFromGitHub(user, repo, fileName, token) {
     const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
-    const headers = { "Authorization": `token ${token}`, "Cache-Control": "no-store" };
     
-    const res = await fetch(url, { headers });
+    // 修正前（エラー原因）: const headers = { "Authorization": `token ${token}`, "Cache-Control": "no-store" };
+    // 修正後: ヘッダーにはトークンだけを入れる
+    const headers = { "Authorization": `token ${token}` };
+    
+    // cache: "no-store" はヘッダーではなく、fetchのオプションとして渡すのが正解
+    const res = await fetch(url, { headers, cache: "no-store" });
     return res;
 }
+// ▲▲▲ 修正ここまで ▲▲▲
 
 export async function saveToGitHub(user, repo, fileName, token, content, sha = null) {
     const url = `https://api.github.com/repos/${user}/${repo}/contents/${fileName}`;
