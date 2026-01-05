@@ -35,6 +35,14 @@ window.onload = function() {
     
     document.getElementById('modeBtn').addEventListener('click', toggleDarkMode);
     if(settings.theme === 'dark') toggleDarkMode();
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+        if (confirm("消去しますか？")) {
+            document.getElementById('input').value = "";
+            document.getElementById('output').innerText = "";
+            document.getElementById('charCount').innerText = "文字数: 0";
+        }
+    });
     
     document.getElementById('presetsJson').addEventListener('input', refreshPresetsFromUI);
     document.getElementById('input').addEventListener('input', () => {}); 
@@ -113,7 +121,7 @@ function toggleDarkMode() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     document.getElementById('modeBtn').innerText = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
 }
-
+    
 // --- Exposed Functions for HTML onclick ---
 
 window.copyToClipboard = function() {
