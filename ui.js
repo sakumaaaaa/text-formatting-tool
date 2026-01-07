@@ -207,11 +207,17 @@ window.suggestRules = function() {
     const out = document.getElementById('output').innerText; 
     if(!out) { alert("まずは整形を実行してください。"); return; }
     
-    // 【修正】現在のリスト内容を取得し、重複チェック用のセットを作成
+    // 【再修正】Box 3の内容から「登録済みの置換元キーワード」を抽出
     const currentListText = document.getElementById('replaceList').value;
-    const existingRules = new Set();
+    const existingKeys = new Set();
+    
     currentListText.split('\n').forEach(line => {
-        if(line.trim()) existingRules.add(line.trim());
+        const parts = line.split('>');
+        if (parts.length >= 1) {
+            // 左辺（カンマ区切りの単語群）を全て登録済みにする
+            const keys = parts[0].split(',').map(s => s.trim());
+            keys.forEach(k => { if(k) existingKeys.add(k); });
+        }
     });
 
     const matches = out.match(/[ァ-ヶー]{3,}/g) || [];
@@ -224,8 +230,8 @@ window.suggestRules = function() {
             if (base.length < 3) return;
             const rule = `${word}, ${base} > ${base}`; 
             
-            // 【修正】今回の候補内で重複せず、かつ既存リストにも存在しない場合のみ追加
-            if (!seen.has(rule) && !existingRules.has(rule)) { 
+            // 【再修正】「元の単語（word）」が既にキーとして登録されているかチェック
+            if (!seen.has(rule) && !existingKeys.has(word)) { 
                 rules.push(rule); 
                 seen.add(rule); 
             }
