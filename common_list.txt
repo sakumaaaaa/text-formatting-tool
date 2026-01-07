@@ -10,6 +10,7 @@ Extreme Ultraviolet
 Galaxy AI
 GaN HEMT
 Gate All Around
+Google Chrome
 Graphics Processing Unit
 High Bandwidth Memory
 Infineon Technologies
