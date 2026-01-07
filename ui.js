@@ -202,15 +202,48 @@ window.createNewStyle = function() {
     alert(`新規スタイル "${name}" を作成しました。`);
 }
 
+// 修正後の suggestRules 関数
 window.suggestRules = function() { 
-    const out = document.getElementById('output').innerText; if(!out) { alert("まずは整形を実行してください。"); return; }
-    const rules = Logic.generateSuggestions(out);
+    const out = document.getElementById('output').innerText; 
+    if(!out) { alert("まずは整形を実行してください。"); return; }
+    
+    // 【修正】現在のリスト内容を取得し、重複チェック用のセットを作成
+    const currentListText = document.getElementById('replaceList').value;
+    const existingRules = new Set();
+    currentListText.split('\n').forEach(line => {
+        if(line.trim()) existingRules.add(line.trim());
+    });
+
+    const matches = out.match(/[ァ-ヶー]{3,}/g) || [];
+    const rules = []; 
+    const seen = new Set();
+
+    Array.from(new Set(matches)).sort().forEach(word => {
+        if (word.endsWith('ー')) {
+            const base = word.slice(0, -1); 
+            if (base.length < 3) return;
+            const rule = `${word}, ${base} > ${base}`; 
+            
+            // 【修正】今回の候補内で重複せず、かつ既存リストにも存在しない場合のみ追加
+            if (!seen.has(rule) && !existingRules.has(rule)) { 
+                rules.push(rule); 
+                seen.add(rule); 
+            }
+        }
+    });
     
     if (rules.length > 0) {
-        currentSuggestions = rules; const panel = document.getElementById('assistPanel'); const listDiv = document.getElementById('assistList');
-        listDiv.innerHTML = ""; rules.forEach((r, i) => { listDiv.innerHTML += `<div class="assist-item"><input type="checkbox" id="rule_${i}" checked> <label for="rule_${i}">${r}</label></div>`; });
+        currentSuggestions = rules; 
+        const panel = document.getElementById('assistPanel'); 
+        const listDiv = document.getElementById('assistList');
+        listDiv.innerHTML = ""; 
+        rules.forEach((r, i) => { 
+            listDiv.innerHTML += `<div class="assist-item"><input type="checkbox" id="rule_${i}" checked> <label for="rule_${i}">${r}</label></div>`; 
+        });
         panel.style.display = 'block';
-    } else { alert("候補は見つかりませんでした。"); }
+    } else { 
+        alert("新規の候補は見つかりませんでした。（すべて登録済み、または対象なし）"); 
+    }
 }
 
 window.applySuggestions = function() {
