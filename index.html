@@ -28,7 +28,7 @@
         <!-- ▲▲▲ ここまで ▲▲▲ -->
     </details>
 
-    <details id="listDetails" open>
+<details id="listDetails" open>
         <summary>📚 各種リストの同期・管理</summary>
         <div class="details-content list-grid">
             <!-- 1. English/Name Master (Box 1: Blue) -->
@@ -40,7 +40,7 @@
                         <button class="btn-expand" onclick="openModal('companyList', '1. 英語・名称マスタ')">🔍 拡大</button>
                     </div>
                 </label>
-                <textarea id="companyList" style="height: 145px;" placeholder="誤記 > 正解&#10;In tel > Intel"></textarea>
+                <textarea id="companyList" style="height: 145px;" placeholder="誤記 > 正解&#10;In tel > Intel" oninput="onListInput('companyList')"></textarea>
                 <button class="btn-sync" onclick="syncList('company_list.txt', 'companyList')">☁️ 同期</button>
             </div>
 
@@ -53,8 +53,8 @@
                         <button class="btn-expand" onclick="openModal('whitelist', '2. 保護ワード')">🔍 拡大</button>
                     </div>
                 </label>
-                <input type="text" id="search_whitelist" style="padding:4px; font-size:0.8rem;" placeholder="保護語を検索...">
-                <textarea id="whitelist" style="height: 120px;" placeholder="ここにある語は強制復元されます"></textarea>
+                <input type="text" id="search_whitelist" style="padding:4px; font-size:0.8rem;" placeholder="保護語を検索..." oninput="filterList()">
+                <textarea id="whitelist" style="height: 120px;" placeholder="ここにある語は強制復元されます" oninput="onListInput('whitelist')"></textarea>
                 <button class="btn-sync" onclick="syncList('common_list.txt', 'whitelist')">☁️ 同期</button>
             </div>
             
@@ -67,7 +67,7 @@
                         <button class="btn-expand" onclick="openModal('replaceList', '3. 共通置換ルール')">🔍 拡大</button>
                     </div>
                 </label>
-                <textarea id="replaceList" style="height: 120px;" placeholder="表記揺れ > 統一表記"></textarea>
+                <textarea id="replaceList" style="height: 120px;" placeholder="表記揺れ > 統一表記" oninput="onListInput('replaceList')"></textarea>
                 <button class="btn-assist" onclick="suggestRules()">📋 整形結果から置換案を抽出</button>
                 <div id="assistPanel" style="display:none; background:rgba(0,0,0,0.05); padding:10px; border-radius:4px; font-size:0.8rem;">
                     <div id="assistList" style="max-height:100px; overflow-y:auto; margin-bottom:5px;"></div>
@@ -85,7 +85,7 @@
                         <button class="btn-expand" onclick="openModal('presetsJson', '4. 媒体別スタイル')">🔍 拡大</button>
                     </div>
                 </label>
-                <textarea id="presetsJson" style="height: 145px;" placeholder="[StyleName]&#10;Key > Val"></textarea>
+                <textarea id="presetsJson" style="height: 145px;" placeholder="[StyleName]&#10;Key > Val" oninput="onListInput('presetsJson')"></textarea>
                 <button class="btn-sync" onclick="syncList('presets.json', 'presetsJson')">☁️ 同期</button>
             </div>
         </div>
