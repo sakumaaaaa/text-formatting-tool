@@ -1,15 +1,18 @@
 Advanced Driver Assistance Systems
+Advanced Micro Devices
 Apple Intelligence
 Bob Swan
 DDR5 SDRAM
 Double Data Rate 5 Synchronous DRAM
 European Chips Act
+Excel 2013
 Extreme Ultraviolet
 Galaxy AI
 GaN HEMT
 Gate All Around
 Graphics Processing Unit
 High Bandwidth Memory
+Infineon Technologies
 International Data Corp.
 Internet of Things
 JEDEC Solid State Technology Association
@@ -18,10 +21,9 @@ Original Design Manufacturing
 Power MOSFET
 Solid State Drive
 System on a Chip
+Taiwan Semiconductor Manufacturing Company
 United States Steel
 Windows 10
 Windows 11
 Windows 8
-Infineon Technologies
-Taiwan Semiconductor Manufacturing Company
-Advanced Micro Devices
+Word 2019
