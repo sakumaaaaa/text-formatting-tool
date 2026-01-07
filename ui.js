@@ -202,19 +202,17 @@ window.createNewStyle = function() {
     alert(`新規スタイル "${name}" を作成しました。`);
 }
 
-// 修正後の suggestRules 関数
+// --- [修正] 重複排除機能を追加した抽出アシスト ---
 window.suggestRules = function() { 
     const out = document.getElementById('output').innerText; 
     if(!out) { alert("まずは整形を実行してください。"); return; }
     
-    // 【再修正】Box 3の内容から「登録済みの置換元キーワード」を抽出
+    // 既存リストから登録済みの「左辺キー」を抽出
     const currentListText = document.getElementById('replaceList').value;
     const existingKeys = new Set();
-    
     currentListText.split('\n').forEach(line => {
         const parts = line.split('>');
         if (parts.length >= 1) {
-            // 左辺（カンマ区切りの単語群）を全て登録済みにする
             const keys = parts[0].split(',').map(s => s.trim());
             keys.forEach(k => { if(k) existingKeys.add(k); });
         }
@@ -230,7 +228,7 @@ window.suggestRules = function() {
             if (base.length < 3) return;
             const rule = `${word}, ${base} > ${base}`; 
             
-            // 【再修正】「元の単語（word）」が既にキーとして登録されているかチェック
+            // 重複チェック: 今回の候補内で重複せず、かつ既存リストの左辺キーにも存在しない場合のみ追加
             if (!seen.has(rule) && !existingKeys.has(word)) { 
                 rules.push(rule); 
                 seen.add(rule); 
@@ -268,14 +266,58 @@ function bindGlobals() {
     // Globals are bound via window assignment above
 }
 
+// --- [修正] ステータス更新と警告表示の制御 ---
 function checkUnsaved(id) {
     const status = document.getElementById('status_' + id);
-    if (lastSynced[id] === null) { status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; return; }
+    const textArea = document.getElementById(id);
+    // 警告メッセージ用の要素ID（例: warning_companyList）
+    const warningId = 'warning_' + id;
+    let warningEl = document.getElementById(warningId);
+
+    // 警告要素がなければ動的に生成して挿入
+    if (!warningEl) {
+        warningEl = document.createElement('div');
+        warningEl.id = warningId;
+        warningEl.style.color = 'var(--accent-red)';
+        warningEl.style.fontSize = '0.75rem';
+        warningEl.style.marginTop = '5px';
+        warningEl.style.display = 'none'; // 初期は非表示
+        warningEl.innerText = "※編集中の内容はブラウザの再読み込みで消えます";
+        // ボタンの直前、またはテキストエリアの直後など適切な場所に挿入
+        // ここでは同期ボタンの親要素の先頭、あるいはボタンの前に追加する
+        // リストボックス構造: label, textarea, (assist?), button.btn-sync
+        // btn-syncを探してその前に挿入するのが無難
+        const btnSync = textArea.parentElement.querySelector('.btn-sync');
+        if (btnSync) {
+            textArea.parentElement.insertBefore(warningEl, btnSync);
+        }
+    }
+
+    if (lastSynced[id] === null) { 
+        status.innerText = "⚠️ 未共有"; 
+        status.className = "list-status status-unsaved";
+        warningEl.style.display = 'block'; // 警告表示
+        return; 
+    }
+    
     const current = document.getElementById(id).value.trim(); 
     const last = (lastSynced[id] || "").trim();
-    if (last === "") { status.innerText = "☁️ 未読込"; status.className = "list-status status-init"; }
-    else if (current !== last) { status.innerText = "⚠️ 未共有"; status.className = "list-status status-unsaved"; }
-    else { status.innerText = "✅ 最新"; status.className = "list-status status-sync"; }
+    
+    if (last === "") { 
+        status.innerText = "☁️ 未読込"; 
+        status.className = "list-status status-init"; 
+        warningEl.style.display = 'none'; // 警告非表示
+    }
+    else if (current !== last) { 
+        status.innerText = "⚠️ 未共有"; 
+        status.className = "list-status status-unsaved"; 
+        warningEl.style.display = 'block'; // 警告表示
+    }
+    else { 
+        status.innerText = "✅ 最新"; 
+        status.className = "list-status status-sync"; 
+        warningEl.style.display = 'none'; // 警告非表示
+    }
 }
 
 function checkConflicts() { const alertBox = document.getElementById('conflictAlert'); if(alertBox) alertBox.style.display = 'none'; }
@@ -328,11 +370,21 @@ window.filterList = function() {
 
 // --- Main Process & Sync ---
 
+// --- [修正] データ消失を防ぐ安全な同期フロー ---
 async function syncList(fileName, elementId) {
     const token = document.getElementById('githubToken').value;
     const user = document.getElementById('githubUser').value;
     const repo = document.getElementById('githubRepo').value;
     const textArea = document.getElementById(elementId);
+    
+    // リスト名の取得（ダイアログ表示用）
+    let listLabel = fileName; 
+    const parentBox = textArea.closest('.list-box');
+    if (parentBox) {
+        const labelEl = parentBox.querySelector('label span');
+        if (labelEl) listLabel = `【${labelEl.innerText}】`;
+    }
+    
     if(!token || !user || !repo) { alert("同期設定が必要です"); return; }
     
     if (elementId !== 'presetsJson') { textArea.value = Logic.formatListContent(textArea.value); }
@@ -347,30 +399,52 @@ async function syncList(fileName, elementId) {
             if (elementId === 'presetsJson') {
                 const parsed = Logic.jsonToText(remoteJsonRaw);
                 displayContent = parsed.text;
-                loadedPresetsData = parsed.data; 
-                updateStyleSelect();
+                // ※ここではまだ loadedPresetsData を更新しない
             } else {
                 displayContent = Logic.formatListContent(remoteJsonRaw);
-                if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
-                if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
+                // ※ここではまだ masterList を更新しない
             }
             
+            // 競合チェック: ローカルに入力があり、かつリモートと異なる場合
             if (textArea.value.trim() !== "" && (textArea.value.trim() !== displayContent.trim() || lastSynced[elementId] === null)) {
-                if (confirm("GitHubに保存（上書き）しますか？")) {
+                
+                // 問1: 保存（Push）の確認
+                if (confirm(`${listLabel} の編集内容を、サーバーへ保存しますか？\n※保存内容はチーム全員に共有・適用されます。\n\n[OK] 保存する (Push)\n[キャンセル] 保存しない`)) {
+                    
                     let finalToSave = textArea.value; 
                     if (elementId === 'presetsJson') finalToSave = Logic.textToJson(textArea.value, loadedPresetsData);
                     
                     await Storage.saveToGitHub(user, repo, fileName, token, finalToSave, data.sha);
                     
-                    alert("保存完了"); displayContent = textArea.value; 
-                    if (elementId === 'presetsJson') {
-                        remoteJsonRaw = finalToSave;
-                        loadedPresetsData = JSON.parse(finalToSave);
+                    alert("GitHubへの保存が完了しました。");
+                    
+                    // Push成功時はローカルの内容を正とする
+                    displayContent = textArea.value; 
+                    if (elementId === 'presetsJson') remoteJsonRaw = finalToSave;
+                    
+                } else {
+                    // 問2: 読込（Pull）の確認
+                    if (!confirm(`では、サーバーにある最新の ${listLabel} を読み込みますか？\n※現在入力されている内容は消えてしまいます。\n\n[OK] 読み込む (Pull)\n[キャンセル] 何もしない (編集継続)`)) {
+                        return; // ここで中断（ローカル維持）
                     }
+                    // OKなら下へ進み displayContent（リモート値）で上書き
                 }
             }
-            textArea.value = displayContent; lastSynced[elementId] = displayContent; 
-            checkUnsaved(elementId); if(elementId !== 'presetsJson') checkConflicts();
+            
+            // 確定値の適用
+            textArea.value = displayContent; 
+            lastSynced[elementId] = displayContent; 
+            
+            // 内部データの更新
+            if(elementId === 'whitelist') masterWhitelist = displayContent.split('\n');
+            if(elementId === 'companyList') masterCompanyList = displayContent.split('\n');
+            if (elementId === 'presetsJson') {
+                loadedPresetsData = JSON.parse(remoteJsonRaw);
+                updateStyleSelect();
+            }
+            
+            checkUnsaved(elementId); 
+            if(elementId !== 'presetsJson') checkConflicts();
             
         } else if(res.status === 404) {
              if(confirm(`ファイル ${fileName} が見つかりません。新規作成しますか？`)) {
