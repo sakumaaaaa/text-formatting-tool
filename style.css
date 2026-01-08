@@ -78,5 +78,16 @@ body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: var(--modal-overlay); }
 .modal-content { background-color: var(--container-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 900px; height: 80%; border-radius: 8px; display: flex; flex-direction: column; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+
+/* 追加 */
+.compare-mode input:disabled + span, /* もしspanで囲っているなら */
+.compare-mode {
+    transition: opacity 0.3s;
+}
+/* 親要素ごと薄くする、またはinputがdisabledなら親を薄くする */
+.compare-mode:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px; }
 .modal-textarea { flex-grow: 1; resize: none; font-size: 14px; line-height: 1.5; }
