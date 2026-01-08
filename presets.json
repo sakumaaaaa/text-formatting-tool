@@ -34,7 +34,8 @@
       "Taiwan Semiconductor Manufacturing Company": "台湾TSMC | TSMC",
       "Advanced Micro Devices": "米AMD（Advanced Micro Devices） | AMD",
       "Apple": "米Apple | Apple",
-      "スマートフォン": "スマートフォン（スマホ） | スマホ"
+      "スマートフォン": "スマートフォン（スマホ） | スマホ",
+      "ブラウザー": "ブラウザ"
     },
     "options": {
       "opt_percent": "zen",
