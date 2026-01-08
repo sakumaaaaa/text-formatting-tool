@@ -68,6 +68,9 @@ body.dark-mode #modeBtn { background: #f8f9fa; color: #343a40; }
 .controls { background: var(--opt-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border: 1px solid var(--border-color); }
 .button-main { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
 #output { background: var(--container-bg); padding: 20px; border: 2px solid var(--border-color); border-radius: 8px; white-space: pre-wrap; min-height: 250px; font-size: 15px; line-height: 1.6; }
+/* Placeholder for output */
+#output:empty::before { content: "ここに結果が表示されます"; color: #999; }
+
 .diff-tag { color: #d63384; font-weight: bold; background: #fff0f6; border-radius: 3px; padding: 0 2px; }
 body.dark-mode .diff-tag { color: #ff7eb9; background: #4b2d39; }
 .counter-badge { font-size: 0.75rem; background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 10px; }
