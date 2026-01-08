@@ -15,7 +15,7 @@
     
     <h1>テキスト整形くん 校閲Pro <span style="font-size:0.6em; color:var(--accent-blue); vertical-align:middle;">v31.1</span></h1>
 
-    <details>
+    <details id="syncSettings">
         <summary>🔧 チーム同期・基本設定</summary>
         <div class="details-content" style="font-size: 0.8rem; background: var(--config-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
             <div>トークン: <input type="password" id="githubToken" style="width:95%;"></div>
@@ -28,7 +28,7 @@
         <!-- ▲▲▲ ここまで ▲▲▲ -->
     </details>
 
-<details id="listDetails" open>
+    <details id="listDetails" open>
         <summary>📚 各種リストの同期・管理</summary>
         <div class="details-content list-grid">
             <!-- 1. English/Name Master (Box 1: Blue) -->
@@ -94,7 +94,7 @@
         </div>
     </details>
 
-    <details>
+    <details id="optionDetails">
         <summary>🔡 記号・組版オプション</summary>
         <div class="details-content">
             <div class="options-grid" id="optionsGrid">
@@ -108,8 +108,8 @@
                 <div class="opt-item"><span>～ 波ダーシ</span><select id="opt_wave"><option value="wave">波ダーシ 〜</option><option value="tilde">全角チルダ ～</option></select></div>
                 <div class="opt-item"><span>― ダーシ</span><select id="opt_dash"><option value="zen">全角 ―</option><option value="han">半角 -</option></select></div>
                 <div class="opt-item"><span>- ハイフン</span><select id="opt_hyphen"><option value="han">半角 -</option><option value="zen">全角 －</option></select></div>
-                <div class="opt-item"><span>／ スラッシュ</span><select id="opt_slash"><option value="han">半角 /</option><option value="zen">全角 ／</option></select></div>
-                <div class="opt-item"><span>＝ 等号</span><select id="opt_equal"><option value="han">半角 =</option><option value="zen">全角 ＝</option></select></div>
+                <div class="opt-item"><span>／ スラッシュ</span><select id="opt_slash"><option value="zen">全角 ／</option><option value="han">半角 /</option></select></div>
+                <div class="opt-item"><span>＝ 等号</span><select id="opt_equal"><option value="zen">全角 ＝</option><option value="han">半角 =</option></select></div>
                 <div class="opt-item"><span>感嘆疑問 ！ ？</span><select id="opt_mark"><option value="zen">全角 ！ ？</option><option value="han">半角 ! ?</option></select></div>
                 <div class="opt-item"><span>！ ？ 後の空き</span><select id="opt_mark_space"><option value="keep">維持</option><option value="force">全角アキ強制</option><option value="none">詰める</option></select></div>
             </div>
@@ -143,9 +143,9 @@
     <textarea id="input" placeholder="テキストを貼り付けてください..."></textarea>
     
     <div class="button-main">
-        <button class="btn-exec" onclick="processText()">✨ 整形・校閲を実行</button>
-        <button class="btn-copy" onclick="copyToClipboard()">📋 結果をコピー</button>
-        <button class="btn-save" onclick="downloadTxt()">💾 保存</button>
+        <button id="btnProcess" class="btn-exec" onclick="processText()">✨ 整形・校閲を実行</button>
+        <button id="btnCopy" class="btn-copy" onclick="copyToClipboard()">📋 結果をコピー</button>
+        <button id="btnSave" class="btn-save" onclick="downloadTxt()">💾 結果を保存</button>
     </div>
 
     <h2>② 整形・校閲結果</h2>
