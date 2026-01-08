@@ -43,7 +43,6 @@ export function textToJson(text, currentData) {
             else { const saved = finalObj[styleName]; finalObj[styleName] = { rules: newRulesMap[styleName], options: saved.options||{}, _meta: saved._meta||{} }; }
         }
     }
-    // Remove deleted styles
     for (let key in finalObj) { if (!newRulesMap[key]) delete finalObj[key]; }
     return JSON.stringify(finalObj, null, 2);
 }
@@ -88,11 +87,15 @@ export function runProcessText(inputText, isCompare, activeStyle, config, lists,
     text = text.replace(/(^|\n)\s*　/g, (m, p1) => p1 + '___P_ZPARA___');
     text = text.replace(/\n\n+/g, '___P_DPARA___');
 
-    // --- Phase 1: Ghost Buster ---
+    // --- Phase 1: Ghost Buster (Strengthened) ---
     let prevText;
     do {
         prevText = text;
+        // 英数字間のスペース除去
         text = text.replace(/([a-zA-Z0-9])[\s\n]+([a-zA-Z0-9])/g, '$1$2'); 
+        // [修正] 数値・記号・全角数字間のスペース除去
+        text = text.replace(/([0-9\.\%０-９．％])[\s\n]+([0-9\.\%０-９．％])/g, '$1$2');
+        
         text = text.replace(/([^\x00-\x7F])[\s\n]+([a-zA-Z0-9])/g, '$1$2'); 
         text = text.replace(/([a-zA-Z0-9])[\s\n]+([^\x00-\x7F])/g, '$1$2'); 
     } while (text !== prevText);
@@ -196,8 +199,11 @@ export function runProcessText(inputText, isCompare, activeStyle, config, lists,
                 return p;
             });
         });
+    } // End of Phase 4 (if activeStyle !== 'none')
 
-        // --- Phase 5: Symbols & Formatting ---
+    // --- Phase 5: Symbols & Formatting ---
+    // [修正] スタイル「なし」の時は実行しない
+    if (activeStyle !== 'none') {
         text = text.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1').replace(/([、。，]) +/g, '$1');
 
         const replaceSym = (regex, target) => { 
@@ -231,7 +237,7 @@ export function runProcessText(inputText, isCompare, activeStyle, config, lists,
         }
         text = text.replace(/\uFF5E/g, isCompare ? '\uFF5E【>\u301C】' : '\u301C');
         text = text.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => (s.includes('___P_')) ? s : (isCompare ? `${s}【>${String.fromCharCode(s.charCodeAt(0)-0xFEE0)}】` : String.fromCharCode(s.charCodeAt(0)-0xFEE0)));
-    }
+    } // End of Phase 5
 
     // --- Restoration ---
     let finalOutputWithTags = text;
