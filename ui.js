@@ -303,7 +303,9 @@ function checkUnsaved(id) {
     const current = document.getElementById(id).value.trim(); 
     const last = (lastSynced[id] || "").trim();
     
-    if (last === "") { 
+    // [修正] lastが空でも、currentが入っていれば「未共有（新規入力）」とみなす
+    // ただし初期ロード直後(currentも空)は除外
+    if (last === "" && current === "") { 
         status.innerText = "☁️ 未読込"; 
         status.className = "list-status status-init"; 
         warningEl.style.display = 'none'; 
@@ -311,7 +313,7 @@ function checkUnsaved(id) {
     else if (current !== last) { 
         status.innerText = "⚠️ 未共有"; 
         status.className = "list-status status-unsaved"; 
-        warningEl.style.display = 'block'; 
+        warningEl.style.display = 'block'; // 警告表示！
     }
     else { 
         status.innerText = "✅ 最新"; 
