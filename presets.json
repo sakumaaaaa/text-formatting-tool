@@ -3,7 +3,7 @@
     "rules": {
       "ウエハ": "ウエハー",
       "メモリ": "メモリー",
-      "Apple": "アップル社"
+      "Apple": "アップル社あああ"
     },
     "options": {
       "opt_percent": "han",
@@ -33,7 +33,8 @@
       "Intel": "米Intel | Intel",
       "Taiwan Semiconductor Manufacturing Company": "台湾TSMC | TSMC",
       "Advanced Micro Devices": "米AMD（Advanced Micro Devices） | AMD",
-      "Apple": "米Apple | Apple"
+      "Apple": "米Apple | Apple",
+      "スマートフォン": "スマートフォン（スマホ） | スマホ"
     },
     "options": {
       "opt_percent": "zen",
