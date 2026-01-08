@@ -170,15 +170,20 @@ window.saveModal = function() {
     window.closeModal();
 }
 
+// [修正] Box4の内容を保持したままオプションのみ更新
 window.updateCurrentStyle = function() {
     const name = document.getElementById('activeStyle').value;
     if (name === 'none' || !loadedPresetsData[name]) return;
+    
+    // メモリ上のオプションのみ更新
     loadedPresetsData[name].options = {};
     OPT_KEYS.forEach(k => { const el = document.getElementById(k); if(el) loadedPresetsData[name].options[k] = el.value; });
     loadedPresetsData[name]._meta.updated = new Date().toISOString();
-    document.getElementById('presetsJson').value = Logic.jsonToText(JSON.stringify(loadedPresetsData), null).text;
-    lastSynced['presetsJson'] = null; checkUnsaved('presetsJson');
-    alert(`スタイル "${name}" の設定を更新しました。`);
+    
+    // Box 4 (Textarea) は書き換えない
+    lastSynced['presetsJson'] = null; 
+    checkUnsaved('presetsJson');
+    alert(`スタイル "${name}" の設定を更新しました。（Box 4の内容は保持されています）`);
 }
 
 window.createNewStyle = function() {
@@ -189,7 +194,7 @@ window.createNewStyle = function() {
     loadedPresetsData[name] = { rules: {}, options: opts, _meta: { created: new Date().toISOString() } };
     const textArea = document.getElementById('presetsJson');
     
-    // Append and refresh
+    // Append and refresh (新規作成時は追記が必要)
     const currentJson = Logic.textToJson(textArea.value, loadedPresetsData);
     loadedPresetsData = JSON.parse(currentJson);
     // Add new one
@@ -207,7 +212,6 @@ window.suggestRules = function() {
     const out = document.getElementById('output').innerText; 
     if(!out) { alert("まずは整形を実行してください。"); return; }
     
-    // 既存リストから登録済みの「左辺キー」を抽出
     const currentListText = document.getElementById('replaceList').value;
     const existingKeys = new Set();
     currentListText.split('\n').forEach(line => {
@@ -228,7 +232,6 @@ window.suggestRules = function() {
             if (base.length < 3) return;
             const rule = `${word}, ${base} > ${base}`; 
             
-            // 重複チェック: 今回の候補内で重複せず、かつ既存リストの左辺キーにも存在しない場合のみ追加
             if (!seen.has(rule) && !existingKeys.has(word)) { 
                 rules.push(rule); 
                 seen.add(rule); 
@@ -270,23 +273,20 @@ function bindGlobals() {
 function checkUnsaved(id) {
     const status = document.getElementById('status_' + id);
     const textArea = document.getElementById(id);
-    // 警告メッセージ用の要素ID（例: warning_companyList）
     const warningId = 'warning_' + id;
     let warningEl = document.getElementById(warningId);
 
-    // 警告要素がなければ動的に生成して挿入
+    // 警告要素がなければ動的に生成して挿入（同期ボタンの直上に）
     if (!warningEl) {
         warningEl = document.createElement('div');
         warningEl.id = warningId;
         warningEl.style.color = 'var(--accent-red)';
         warningEl.style.fontSize = '0.75rem';
         warningEl.style.marginTop = '5px';
-        warningEl.style.display = 'none'; // 初期は非表示
-        warningEl.innerText = "※編集中の内容はブラウザの再読み込みで消えます";
-        // ボタンの直前、またはテキストエリアの直後など適切な場所に挿入
-        // ここでは同期ボタンの親要素の先頭、あるいはボタンの前に追加する
-        // リストボックス構造: label, textarea, (assist?), button.btn-sync
-        // btn-syncを探してその前に挿入するのが無難
+        warningEl.style.display = 'none';
+        warningEl.innerText = "※編集中の内容はWebブラウザーの再読み込みで消えます";
+        
+        // btn-syncを探してその前に挿入
         const btnSync = textArea.parentElement.querySelector('.btn-sync');
         if (btnSync) {
             textArea.parentElement.insertBefore(warningEl, btnSync);
@@ -296,7 +296,7 @@ function checkUnsaved(id) {
     if (lastSynced[id] === null) { 
         status.innerText = "⚠️ 未共有"; 
         status.className = "list-status status-unsaved";
-        warningEl.style.display = 'block'; // 警告表示
+        warningEl.style.display = 'block'; 
         return; 
     }
     
@@ -306,17 +306,17 @@ function checkUnsaved(id) {
     if (last === "") { 
         status.innerText = "☁️ 未読込"; 
         status.className = "list-status status-init"; 
-        warningEl.style.display = 'none'; // 警告非表示
+        warningEl.style.display = 'none'; 
     }
     else if (current !== last) { 
         status.innerText = "⚠️ 未共有"; 
         status.className = "list-status status-unsaved"; 
-        warningEl.style.display = 'block'; // 警告表示
+        warningEl.style.display = 'block'; 
     }
     else { 
         status.innerText = "✅ 最新"; 
         status.className = "list-status status-sync"; 
-        warningEl.style.display = 'none'; // 警告非表示
+        warningEl.style.display = 'none'; 
     }
 }
 
@@ -328,6 +328,7 @@ function refreshPresetsFromUI() {
     updateStyleSelect();
 }
 
+// [修正] スタイル「なし」時のUI無効化ロジックを追加
 function updateStyleSelect() {
     const select = document.getElementById('activeStyle');
     const btnUpdate = document.getElementById('btnUpdateStyle');
@@ -339,8 +340,18 @@ function updateStyleSelect() {
     Object.keys(data).forEach(style => { const opt = document.createElement('option'); opt.value = style; opt.innerText = style; select.appendChild(opt); });
     if (Object.keys(data).includes(currentVal)) select.value = currentVal;
     
-    if (select.value === 'none') { if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; } } 
-    else { if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${select.value}] を更新`; } }
+    // スタイル「なし」時の制御
+    if (select.value === 'none') { 
+        if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; } 
+        // 比較モードOFF & 無効化
+        const chk = document.getElementById('compareMode');
+        if (chk) { chk.checked = false; chk.disabled = true; }
+    } else { 
+        if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${select.value}] を更新`; } 
+        // 比較モード有効化
+        const chk = document.getElementById('compareMode');
+        if (chk) { chk.disabled = false; }
+    }
 }
 
 function applyStyle(styleName) {
@@ -349,10 +360,22 @@ function applyStyle(styleName) {
     const isNone = styleName === 'none';
     
     OPT_KEYS.forEach(id => { const el = document.getElementById(id); if(el) { el.disabled = isNone; el.style.opacity = isNone ? "0.5" : "1"; } });
-    if (isNone) { if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; } } 
-    else { if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${styleName}] を更新`; } }
+    
+    // スタイル「なし」時の制御（UI無効化）
+    if (isNone) { 
+        if(btnUpdate) { btnUpdate.disabled = true; btnUpdate.innerText = "🔄 選択されていません"; }
+        const chk = document.getElementById('compareMode');
+        if (chk) { chk.checked = false; chk.disabled = true; }
+        infoSpan.innerText = "";
+        return; 
+    } 
+    else { 
+        if(btnUpdate) { btnUpdate.disabled = false; btnUpdate.innerText = `🔄 [${styleName}] を更新`; } 
+        const chk = document.getElementById('compareMode');
+        if (chk) { chk.disabled = false; }
+    }
 
-    if (isNone || !loadedPresetsData[styleName]) { infoSpan.innerText = ""; return; }
+    if (!loadedPresetsData[styleName]) { infoSpan.innerText = ""; return; }
     const styleData = loadedPresetsData[styleName];
     if (styleData.options && Object.keys(styleData.options).length > 0) {
         let appliedCount = 0;
@@ -377,7 +400,7 @@ async function syncList(fileName, elementId) {
     const repo = document.getElementById('githubRepo').value;
     const textArea = document.getElementById(elementId);
     
-    // リスト名の取得（ダイアログ表示用）
+    // リスト名の取得
     let listLabel = fileName; 
     const parentBox = textArea.closest('.list-box');
     if (parentBox) {
@@ -405,7 +428,7 @@ async function syncList(fileName, elementId) {
                 // ※ここではまだ masterList を更新しない
             }
             
-            // 競合チェック: ローカルに入力があり、かつリモートと異なる場合
+            // 競合チェック
             if (textArea.value.trim() !== "" && (textArea.value.trim() !== displayContent.trim() || lastSynced[elementId] === null)) {
                 
                 // 問1: 保存（Push）の確認
@@ -418,16 +441,14 @@ async function syncList(fileName, elementId) {
                     
                     alert("GitHubへの保存が完了しました。");
                     
-                    // Push成功時はローカルの内容を正とする
                     displayContent = textArea.value; 
                     if (elementId === 'presetsJson') remoteJsonRaw = finalToSave;
                     
                 } else {
                     // 問2: 読込（Pull）の確認
                     if (!confirm(`では、サーバーにある最新の ${listLabel} を読み込みますか？\n※現在入力されている内容は消えてしまいます。\n\n[OK] 読み込む (Pull)\n[キャンセル] 何もしない (編集継続)`)) {
-                        return; // ここで中断（ローカル維持）
+                        return; // 中断
                     }
-                    // OKなら下へ進み displayContent（リモート値）で上書き
                 }
             }
             
@@ -465,6 +486,13 @@ function processText() {
     const isCompare = document.getElementById('compareMode').checked;
     const activeStyle = document.getElementById('activeStyle').value;
     
+    // 空入力チェック（サイレント）
+    if (!inputVal) {
+        document.getElementById('output').innerText = "";
+        document.getElementById('charCount').innerText = "文字数: 0";
+        return;
+    }
+    
     const config = {}; 
     OPT_KEYS.forEach(id => {
         const el = document.getElementById(id);
@@ -487,5 +515,10 @@ function processText() {
         else outputEl.innerText = result.cleanText;
     }
 
-    document.getElementById('charCount').innerText = `文字数: ${result.charCount} | 全角換算: ${result.zenCount}`;
+    // [修正] 0文字時の全角換算非表示
+    if (result.charCount > 0) {
+        document.getElementById('charCount').innerText = `文字数: ${result.charCount} | 全角換算: ${result.zenCount}`;
+    } else {
+        document.getElementById('charCount').innerText = "文字数: 0";
+    }
 }
