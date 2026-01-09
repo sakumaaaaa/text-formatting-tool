@@ -3,3 +3,4 @@ AM D, A MD, A M D, 米AMD, AMD, 米Advanced Micro Devices（Advanced Micro Devic
 In tel, lntel, Int el, 米Intel, Intl > Intel
 Infineon Technologies, Infineon Technologyes, 独Infineon Technologies > Infineon Technologies
 T S M C, TSM C, 台湾TSMC, TSMC TMSC > Taiwan Semiconductor Manufacturing Company
+米Texas Instruments（TI）> Texas Instruments
