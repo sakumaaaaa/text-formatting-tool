@@ -23,6 +23,7 @@ Power MOSFET
 Solid State Drive
 System on a Chip
 Taiwan Semiconductor Manufacturing Company
+Texas Instruments
 United States Steel
 Windows 10
 Windows 11
